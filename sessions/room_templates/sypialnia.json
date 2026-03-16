@@ -1,0 +1,27 @@
+{
+  "room_type": "sypialnia",
+  "room_label": "Sypialnia (Master Bedroom)",
+  "room": {"width": 4.2, "depth": 3.5, "height": 2.7},
+  "walls": {"color": "#E8E5E0", "material": "paint", "texture_roughness": 0.10},
+  "floor": {"color": "#B8A088", "material": "wood", "texture_roughness": 0.30},
+  "ceiling": {"color": "#F5F2EE", "height": 2.7},
+  "furniture": [
+    {"id": "bed_master", "type": "bed", "label": "King bed 160x200cm with upholstered headboard, natural linen bedding", "position": {"x": 0.0, "y": 1.0, "z": 0.0}, "size": {"width": 1.80, "depth": 2.10, "height": 0.50}, "color": "#D4D0CC", "material": "fabric"},
+    {"id": "nightstand_l", "type": "nightstand", "label": "Floating white nightstand with fluted front panel", "position": {"x": -1.2, "y": 1.0, "z": 0.45}, "size": {"width": 0.50, "depth": 0.35, "height": 0.18}, "color": "#F5F0E8", "material": "wood"},
+    {"id": "nightstand_r", "type": "nightstand", "label": "Floating white nightstand with fluted front panel", "position": {"x": 1.2, "y": 1.0, "z": 0.45}, "size": {"width": 0.50, "depth": 0.35, "height": 0.18}, "color": "#F5F0E8", "material": "wood"},
+    {"id": "sconce_l", "type": "lamp", "label": "Spherical opal glass wall sconce — warm glow", "position": {"x": -1.2, "y": 1.6, "z": 1.50}, "size": {"width": 0.15, "depth": 0.15, "height": 0.35}, "color": "#F5F0E8", "material": "glass"},
+    {"id": "sconce_r", "type": "lamp", "label": "Spherical opal glass wall sconce — warm glow", "position": {"x": 1.2, "y": 1.6, "z": 1.50}, "size": {"width": 0.15, "depth": 0.15, "height": 0.35}, "color": "#F5F0E8", "material": "glass"},
+    {"id": "wardrobe", "type": "wardrobe", "label": "Full-height built-in wardrobe with hidden flush gray doors", "position": {"x": 1.8, "y": 0.0, "z": 0.0}, "size": {"width": 0.96, "depth": 0.60, "height": 2.60}, "color": "#D4D0CC", "material": "wood"},
+    {"id": "komoda", "type": "dresser", "label": "Low white dresser with walnut open shelf niche and mirror above", "position": {"x": -1.5, "y": -1.2, "z": 0.0}, "size": {"width": 1.20, "depth": 0.45, "height": 0.80}, "color": "#F5F0E8", "material": "wood"},
+    {"id": "vanity_seat", "type": "stool", "label": "Gray upholstered round pouf", "position": {"x": -1.5, "y": -0.6, "z": 0.0}, "size": {"width": 0.40, "depth": 0.40, "height": 0.42}, "color": "#B5B0AA", "material": "fabric"},
+    {"id": "headboard_panel", "type": "wall_art", "label": "Vertical fluted ribbed panel (lamelki) in light warm gray behind headboard with indirect LED backlight", "position": {"x": 0.0, "y": 1.72, "z": 1.0}, "size": {"width": 2.50, "depth": 0.03, "height": 1.20}, "color": "#D4D0CC", "material": "wood"},
+    {"id": "overhead_cabinets", "type": "cabinet", "label": "Wall-mounted overhead storage cabinets above headboard", "position": {"x": 0.0, "y": 1.65, "z": 2.20}, "size": {"width": 2.50, "depth": 0.35, "height": 0.45}, "color": "#D4D0CC", "material": "wood"},
+    {"id": "rug", "type": "rug", "label": "Soft gray plush carpet under bed", "position": {"x": 0.0, "y": 0.5, "z": 0.0}, "size": {"width": 2.50, "depth": 2.00, "height": 0.02}, "color": "#C8C4BE", "material": "fabric"}
+  ],
+  "openings": [
+    {"type": "window", "wall": "east", "position_along_wall": 0.50, "width": 1.20, "height": 1.50, "bottom_height": 0.80},
+    {"type": "door", "wall": "south", "position_along_wall": 0.80, "width": 0.80, "height": 2.10, "bottom_height": 0.0},
+    {"type": "door", "wall": "north", "position_along_wall": 0.70, "width": 0.70, "height": 2.10, "bottom_height": 0.0}
+  ],
+  "lighting": {"type": "natural", "intensity": 2.5, "color": "#FFF5E0"}
+}

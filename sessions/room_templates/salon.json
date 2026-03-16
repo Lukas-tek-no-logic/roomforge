@@ -1,0 +1,37 @@
+{
+  "room_type": "salon",
+  "room_label": "Salon (Living Room) — Double Height",
+  "room": {"width": 6.0, "depth": 5.0, "height": 5.2},
+  "walls": {"color": "#F0EDE8", "material": "paint", "texture_roughness": 0.12},
+  "floor": {"color": "#C49A6C", "material": "wood", "texture_roughness": 0.35},
+  "ceiling": {"color": "#FFFFFF", "height": 5.2},
+  "furniture": [
+    {"id": "sofa_laurent", "type": "sofa", "label": "LAURENT sofa set — low-profile gray fabric L-shaped sectional", "position": {"x": -0.5, "y": -0.3, "z": 0.0}, "size": {"width": 2.40, "depth": 1.00, "height": 0.75}, "color": "#B5B0AA", "material": "fabric"},
+    {"id": "ottoman_1", "type": "ottoman", "label": "LAURENT matching ottoman", "position": {"x": 0.8, "y": -0.8, "z": 0.0}, "size": {"width": 0.80, "depth": 0.80, "height": 0.40}, "color": "#B5B0AA", "material": "fabric"},
+    {"id": "armchair_1", "type": "armchair", "label": "Cognac leather Imola-style swivel chair", "position": {"x": -1.8, "y": -0.5, "z": 0.0}, "size": {"width": 0.90, "depth": 0.90, "height": 0.80}, "color": "#8B5E3C", "material": "leather"},
+    {"id": "armchair_2", "type": "armchair", "label": "Cognac leather Imola-style swivel chair", "position": {"x": -1.8, "y": 0.6, "z": 0.0}, "size": {"width": 0.90, "depth": 0.90, "height": 0.80}, "color": "#8B5E3C", "material": "leather"},
+    {"id": "coffee_table_1", "type": "table", "label": "Dark round nesting coffee tables — black metal", "position": {"x": -0.3, "y": 0.0, "z": 0.0}, "size": {"width": 0.90, "depth": 0.90, "height": 0.38}, "color": "#2A2A2A", "material": "metal"},
+    {"id": "coffee_table_2", "type": "table", "label": "Smaller nesting table", "position": {"x": 0.2, "y": 0.4, "z": 0.0}, "size": {"width": 0.60, "depth": 0.60, "height": 0.32}, "color": "#2A2A2A", "material": "metal"},
+    {"id": "tv_unit", "type": "tv_stand", "label": "Built-in TV unit with drawers — zabudowa RTV", "position": {"x": 1.8, "y": 0.5, "z": 0.0}, "size": {"width": 3.94, "depth": 0.50, "height": 0.50}, "color": "#3D3028", "material": "wood"},
+    {"id": "bookshelf_laurent", "type": "bookshelf", "label": "LAURENT bookshelf — tall open walnut grid with books", "position": {"x": 2.8, "y": -0.8, "z": 0.0}, "size": {"width": 1.08, "depth": 0.40, "height": 2.20}, "color": "#6B4A32", "material": "wood"},
+    {"id": "piano", "type": "decor", "label": "Black upright Yamaha piano with stool", "position": {"x": 0.5, "y": 2.0, "z": 0.0}, "size": {"width": 1.50, "depth": 0.60, "height": 1.20}, "color": "#1A1A1A", "material": "wood"},
+    {"id": "fireplace", "type": "decor", "label": "Built-in modern fireplace with polished concrete surround and black glass front", "position": {"x": 2.5, "y": 2.2, "z": 0.3}, "size": {"width": 1.20, "depth": 0.40, "height": 0.60}, "color": "#333333", "material": "metal"},
+    {"id": "projector_screen", "type": "decor", "label": "Motorized projector screen — retractable", "position": {"x": 1.8, "y": 2.3, "z": 1.5}, "size": {"width": 1.61, "depth": 0.05, "height": 0.50}, "color": "#F5F0E8", "material": "fabric"},
+    {"id": "wall_art_marble", "type": "wall_art", "label": "Gray veined marble panel feature wall with LED strip accents", "position": {"x": 2.8, "y": 2.45, "z": 1.3}, "size": {"width": 3.00, "depth": 0.03, "height": 2.40}, "color": "#9A9590", "material": "generic"},
+    {"id": "wall_art_herringbone", "type": "wall_art", "label": "Herringbone decorative wood panel in warm beige-gold tones", "position": {"x": -2.8, "y": 2.45, "z": 2.0}, "size": {"width": 2.00, "depth": 0.03, "height": 3.00}, "color": "#C4A67D", "material": "wood"}
+  ],
+  "architectural": {
+    "mezzanine": {"height": 2.8, "railing": "glass_metal", "depth": 1.5, "wall": "north"},
+    "stairs": {"position": "northwest", "treads": "walnut", "risers": "white"},
+    "fireplace": {"wall": "north", "type": "built_in", "surround": "concrete"},
+    "double_height": true
+  },
+  "openings": [
+    {"type": "window", "wall": "east", "position_along_wall": 0.35, "width": 1.00, "height": 2.00, "bottom_height": 0.40},
+    {"type": "window", "wall": "east", "position_along_wall": 0.70, "width": 1.00, "height": 2.00, "bottom_height": 0.40},
+    {"type": "window", "wall": "north", "position_along_wall": 0.50, "width": 0.80, "height": 1.20, "bottom_height": 3.00},
+    {"type": "door", "wall": "south", "position_along_wall": 0.30, "width": 0.90, "height": 2.10, "bottom_height": 0.0},
+    {"type": "opening", "wall": "west", "position_along_wall": 0.50, "width": 2.40, "height": 2.40, "bottom_height": 0.0}
+  ],
+  "lighting": {"type": "natural", "intensity": 3.5, "color": "#FFF8E7"}
+}

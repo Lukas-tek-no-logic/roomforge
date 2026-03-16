@@ -1,0 +1,16 @@
+{
+  "name": "RoomForge — AI Interior Designer",
+  "short_name": "RoomForge",
+  "description": "AI-powered interior design visualization",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0e17",
+  "theme_color": "#0b0e17",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3L2 14h4v13h8v-8h4v8h8V14h4L16 3z' fill='%23e94560'/%3E%3C/svg%3E",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

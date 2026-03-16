@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+sessions/*/
+!sessions/room_templates/
+!sessions/house_style.json
+dgx/blender-render/blender_scene.py

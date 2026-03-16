@@ -1,0 +1,96 @@
+{
+  "name": "Okarmus Residence — DeloDesign",
+  "designer": "DeloDesign (P. Okarmus)",
+  "overall_style": "Contemporary modern minimalist with warm natural material accents",
+
+  "global_prompt_prefix": "Professional interior design visualization in contemporary minimalist style, V-Ray quality architectural render, warm natural light, photorealistic materials with visible texture detail",
+
+  "global_prompt_suffix": "designed by DeloDesign studio, Dezeen magazine quality, clean composition, volumetric lighting with soft shadows, 8K resolution, no people, no text, no watermarks",
+
+  "materials": {
+    "walls_primary": "smooth white painted walls with fine matte finish, subtle plaster texture",
+    "walls_accent_concrete": "polished microcement concrete wall with subtle gray-beige texture variation and fine surface imperfections",
+    "walls_accent_marble": "full-height gray veined marble panels with dramatic natural stone pattern, bookmatched slabs with LED strip lighting between panels",
+    "walls_accent_fluted": "vertical fluted ribbed wall panels (lamelki) in light warm gray, evenly spaced slats creating shadow lines, backlit with indirect LED",
+    "walls_accent_herringbone": "decorative herringbone wood panel in warm beige-gold tones, large scale chevron pattern",
+    "walls_accent_wallpaper": "oversized botanical wallpaper with delicate feather/leaf pattern in warm beige tones on white ground",
+    "floor_wood": "warm engineered oak hardwood flooring in wide planks, natural grain visible, matte oiled finish, honey-warm tone",
+    "floor_tile": "large format porcelain tiles in warm light gray, subtle stone texture, thin grout lines",
+    "floor_concrete": "polished microcement floor in light warm gray, seamless finish",
+    "ceiling": "smooth white ceiling with recessed black track lighting channels",
+    "windows": "wooden window frames in rich walnut finish with deep reveals, contrasting warmly against white walls",
+    "doors": "flush hidden doors in matte light gray, handle-less push-to-open or minimal lever handle"
+  },
+
+  "lighting": {
+    "track_system": "matte black ceiling-mounted track lighting system with adjustable LED spots, clean geometric lines",
+    "pendant_ring": "large circular LED ring pendant light in white, suspended on thin cables, warm white glow",
+    "pendant_cone": "cluster of 5-7 elongated cone-shaped pendant lights in brushed aluminum and black, above kitchen island",
+    "pendant_globe": "spherical opal glass wall sconces mounted on either side of bed headboard, warm diffused light",
+    "pendant_balloon": "hot air balloon shaped pendant light with rope cage structure, for children's rooms",
+    "indirect_led": "recessed indirect LED strip lighting behind mirrors, under floating vanities, in ceiling coves, and behind fluted panels",
+    "spots_white": "white track-mounted spot lights for bedrooms and children's rooms",
+    "natural_light": "abundant natural daylight through walnut-framed windows with green garden visible outside"
+  },
+
+  "color_palette": {
+    "primary_walls": "#F5F2EE",
+    "secondary_gray": "#D4D0CC",
+    "accent_concrete": "#B8B0A8",
+    "accent_marble": "#9A9590",
+    "wood_walnut": "#6B4A32",
+    "wood_oak_floor": "#C49A6C",
+    "metal_black": "#2A2A2A",
+    "metal_track": "#333333",
+    "fabric_gray_sofa": "#B5B0AA",
+    "leather_cognac": "#8B5E3C",
+    "terracotta_accent": "#C4856C",
+    "kids_teal": "#5B8A8A",
+    "kids_blue": "#4A7A9A"
+  },
+
+  "room_styles": {
+    "salon": {
+      "description": "Double-height living room with mezzanine gallery above, central fireplace, herringbone accent wall",
+      "prompt": "spacious double-height living room with mezzanine balcony and glass railing above, polished concrete fireplace surround as focal point, herringbone decorative wood panel on wall, low-profile gray fabric sectional sofa, dark round nesting coffee tables, cognac leather Imola-style swivel chairs, grand piano in corner, large circular LED ring pendant lights hanging at different heights, matte black track lighting on ceiling, warm oak hardwood floor, gray veined marble feature wall with integrated LED strips, walnut-framed windows with lush green garden view"
+    },
+    "kuchnia": {
+      "description": "Open-plan kitchen with white handleless cabinets, stone island, connected to dining area",
+      "prompt": "modern open-plan kitchen with white handleless flat-panel cabinets, large kitchen island with light stone countertop and integrated induction cooktop, cluster of elongated cone pendant lights above island, arched concrete doorway to adjacent room, glass partition with black metal frames, round walnut dining table with dark leather upholstered chairs, circular LED ring pendant above dining area, matte black track lighting, light gray microcement floor transitioning to oak hardwood"
+    },
+    "sypialnia": {
+      "description": "Master bedroom with fluted panel headboard wall, floating nightstands, globe sconces",
+      "prompt": "serene minimalist master bedroom, vertical fluted ribbed panels (lamelki) in light gray behind upholstered headboard, overhead storage cabinets with indirect LED underlight, floating white nightstands with fluted fronts, spherical opal glass wall sconces on each side, natural linen bedding in warm beige tones, soft rumpled duvet texture, gray plush carpet, walnut-framed window with natural light, white track spots on ceiling, hidden flush door in gray"
+    },
+    "lazienka_master": {
+      "description": "Luxury master bathroom with marble walls, freestanding bathtub, walk-in shower",
+      "prompt": "luxurious master bathroom with full-height dramatic gray veined marble slab walls, large format porcelain tile floor, freestanding sculptural bathtub in dark matte gray, frameless glass walk-in shower with rain showerhead, matte black fixtures and fittings, black ladder-style heated towel radiator, recessed ceiling spots creating dramatic wall wash lighting, walnut-framed window, stone bench in shower"
+    },
+    "lazienka": {
+      "description": "Secondary bathroom with stone tiles, textured accent wall, crescent mirror",
+      "prompt": "contemporary bathroom with warm gray stone tiles floor to ceiling, 3D woven textured tile accent wall behind vanity, large organic crescent-shaped backlit mirror, floating white vanity with stone vessel basin, walnut open shelf niche, vertical designer radiator, matte pendant light, walnut-framed window, recessed shower niche with accent lighting"
+    },
+    "pokoj_dziecka": {
+      "description": "Child's room with themed wall mural, climbing wall, colored cabinets",
+      "prompt": "playful children's bedroom with full-wall hand-drawn pencil sketch mural of dinosaur landscape with trees and mountains, hot air balloon pendant light with rope cage, platform bed with integrated storage, teal-colored built-in wardrobe cabinets with indirect LED underlight, wooden climbing ladder (drabinka) with rope, colorful gymnastics mat below, white track spot lights on ceiling, warm oak hardwood floor, pattern-printed bedding"
+    },
+    "pokoj_teo": {
+      "description": "Second child's room with arctic/adventure map wall mural",
+      "prompt": "adventurous children's room with polar/arctic themed wall mural in soft watercolor style showing moose and arctic landscapes, built-in white storage cabinets with teal storage bins on low floating shelf, pendant lights on black cord, desk area by window, warm oak hardwood floor with abstract circular rug, light and airy atmosphere"
+    },
+    "gabinet": {
+      "description": "Home office/library with floor-to-ceiling walnut bookshelf, leather reading chairs",
+      "prompt": "sophisticated home office library with floor-to-ceiling walnut wood bookshelf grid filled with colorful books and decorative objects, two cognac brown leather Imola-style swivel chairs with chrome star base, small dark round side table between chairs, walnut-framed window with green garden view, warm oak floor on raised platform, herringbone accent wood wall visible beyond, abstract African mask gallery wall with geometric wallpaper in earth tones"
+    },
+    "garderoba": {
+      "description": "Walk-in closet with glass doors, walnut interiors, organized storage",
+      "prompt": "elegant walk-in wardrobe with glass doors in black metal frames showing organized interior, walnut wood shelving and hanging rails inside, warm indirect lighting, warm oak hardwood floor, hidden flush gray door, white walls, minimal and organized with carefully displayed clothing and accessories"
+    },
+    "korytarz": {
+      "description": "Hallway with fluted panel walls, built-in storage, accent mirrors",
+      "prompt": "minimal hallway with light gray fluted vertical wall panels, asymmetric organic-shaped backlit mirrors, white floating console with drawers, glass partition with black metal frames visible in background, matte black track lighting, warm oak hardwood floor, hidden flush doors, clean and elegant transition space"
+    }
+  },
+
+  "negative_prompt": "cartoon, CGI plastic look, flat lighting, low quality, blurry, oversaturated colors, deformed geometry, primitive 3D shapes, wireframe, untextured, amateur render, cluttered, messy, text, watermark, people, hands"
+}

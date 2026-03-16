@@ -1,0 +1,30 @@
+services:
+  blender:
+    build: .
+    ports:
+      - "8005:8000"
+    volumes:
+      # Pre-built Blender 5.0.1 (from build-blender.sh)
+      - /home/luok/opt/blender-5.0.1:/opt/blender:ro
+      # Persistent cache for Polyhaven textures and HDRIs
+      - blender-texture-cache:/data/texture_cache
+      - blender-hdri-cache:/data/hdri_cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    shm_size: 2gb
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  blender-texture-cache:
+  blender-hdri-cache:

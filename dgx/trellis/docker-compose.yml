@@ -1,0 +1,29 @@
+services:
+  trellis:
+    build: .
+    ports:
+      - "8003:8000"
+    volumes:
+      - /home/luok/.cache/huggingface:/root/.cache/huggingface
+      - /home/luok/Projects/trellis/pipeline_v2.json:/app/pipeline_v2.json:ro
+      - /home/luok/Projects/trellis/service.py:/app/service.py:ro
+    environment:
+      - TRELLIS_MODEL=microsoft/TRELLIS.2-4B
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+    env_file:
+      - .env
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    shm_size: 4gb
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped

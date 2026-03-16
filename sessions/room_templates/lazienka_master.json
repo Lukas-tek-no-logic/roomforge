@@ -1,0 +1,22 @@
+{
+  "room_type": "lazienka_master",
+  "room_label": "Łazienka Master (Master Bathroom)",
+  "room": {"width": 2.35, "depth": 3.4, "height": 2.7},
+  "walls": {"color": "#B8B0A8", "material": "tile", "texture_roughness": 0.15},
+  "floor": {"color": "#C8C0B8", "material": "tile", "texture_roughness": 0.12},
+  "ceiling": {"color": "#FFFFFF", "height": 2.7},
+  "furniture": [
+    {"id": "bathtub", "type": "decor", "label": "Freestanding sculptural bathtub in dark matte gray", "position": {"x": 0.6, "y": 0.8, "z": 0.0}, "size": {"width": 0.70, "depth": 1.60, "height": 0.55}, "color": "#666660", "material": "ceramic"},
+    {"id": "toilet", "type": "decor", "label": "Wall-hung toilet in matte gray", "position": {"x": -0.8, "y": -0.8, "z": 0.3}, "size": {"width": 0.38, "depth": 0.55, "height": 0.35}, "color": "#888884", "material": "ceramic"},
+    {"id": "vanity", "type": "cabinet", "label": "Floating vanity with stone vessel basin", "position": {"x": 0.0, "y": 1.5, "z": 0.6}, "size": {"width": 1.00, "depth": 0.50, "height": 0.20}, "color": "#F0EDE8", "material": "ceramic"},
+    {"id": "mirror_backlit", "type": "mirror", "label": "Large organic crescent-shaped backlit mirror", "position": {"x": 0.0, "y": 1.67, "z": 1.50}, "size": {"width": 0.80, "depth": 0.03, "height": 0.80}, "color": "#E8E8E8", "material": "glass"},
+    {"id": "towel_radiator", "type": "decor", "label": "Black ladder-style heated towel radiator", "position": {"x": 0.8, "y": -0.3, "z": 0.3}, "size": {"width": 0.50, "depth": 0.08, "height": 1.20}, "color": "#2A2A2A", "material": "metal"},
+    {"id": "shower_glass", "type": "decor", "label": "Frameless glass shower partition with rain showerhead", "position": {"x": -0.6, "y": 0.5, "z": 0.0}, "size": {"width": 0.03, "depth": 1.06, "height": 2.10}, "color": "#E8E8E8", "material": "glass"},
+    {"id": "marble_wall", "type": "wall_art", "label": "Full-height dramatic gray veined marble slab feature wall", "position": {"x": -0.2, "y": -1.67, "z": 1.35}, "size": {"width": 2.35, "depth": 0.02, "height": 2.70}, "color": "#9A9590", "material": "generic"},
+    {"id": "niche_shelf", "type": "shelf", "label": "Recessed shower niche with accent lighting", "position": {"x": -0.8, "y": 0.0, "z": 1.20}, "size": {"width": 0.40, "depth": 0.12, "height": 0.30}, "color": "#D4D0CC", "material": "tile"}
+  ],
+  "openings": [
+    {"type": "window", "wall": "east", "position_along_wall": 0.50, "width": 0.80, "height": 1.00, "bottom_height": 1.20}
+  ],
+  "lighting": {"type": "ceiling_lamp", "intensity": 2.0, "color": "#FFF0E0"}
+}

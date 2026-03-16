@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b0e17" />
+  <title>RoomForge — AI Interior Designer</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3L2 14h4v13h8v-8h4v8h8V14h4L16 3z' fill='%23e94560'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="/static/manifest.json" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- Toast container (1.2) -->
+<div id="toast-container"></div>
+
+<!-- Drop zone overlay (2.4) -->
+<div id="drop-overlay" class="drop-overlay">
+  <div class="drop-overlay-content">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <span>Drop image here</span>
+    <small>Room photo, floor plan, or inspiration</small>
+  </div>
+</div>
+
+<header>
+  <h1>RoomForge</h1>
+  <span class="subtitle">AI-powered interior design</span>
+  <div class="header-actions">
+    <button class="header-btn" id="theme-toggle" data-tooltip="Toggle theme" aria-label="Toggle theme">
+      <svg id="theme-icon-dark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <svg id="theme-icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+    <button class="header-btn" id="sound-toggle" data-tooltip="Toggle sound" aria-label="Toggle sound">
+      <svg id="sound-icon-on" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      <svg id="sound-icon-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+    </button>
+    <button class="header-btn" id="shortcuts-btn" data-tooltip="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- Progress bar (3.6) -->
+<div class="progress-bar" id="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+
+<div class="main" id="main-layout">
+
+  <!-- Left: Start options + Chat -->
+  <div class="left-panel" id="left-panel">
+
+    <button class="collapse-toggle" id="collapse-toggle" data-tooltip="Collapse panel">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+
+    <!-- Start options: 4 ways to begin -->
+    <div class="start-options" id="start-options">
+      <div class="start-section">
+        <div class="start-label">Start from:</div>
+
+        <!-- Option 1: Room templates -->
+        <div class="start-group">
+          <select id="template-select">
+            <option value="">-- Pick a room template --</option>
+          </select>
+          <button class="btn btn-primary btn-sm" id="load-template-btn" data-tooltip="Load selected template" disabled>Load</button>
+        </div>
+
+        <!-- Option 2: Text description -->
+        <div class="start-group">
+          <input type="text" id="describe-input"
+            placeholder="Or describe: 'Modern 4x3m bedroom with king bed...'" />
+          <button class="btn btn-primary btn-sm" id="describe-btn" data-tooltip="Generate room from description">Create</button>
+        </div>
+
+        <!-- Option 3: Upload photo -->
+        <div class="start-group">
+          <label class="upload-btn" for="file-input">Upload room photo</label>
+          <input type="file" id="file-input" accept="image/*" />
+        </div>
+
+        <!-- Option 4: Floor plan -->
+        <div class="start-group">
+          <label class="upload-btn upload-btn-secondary" for="floorplan-input">Upload floor plan (PDF/image)</label>
+          <input type="file" id="floorplan-input" accept="image/*,.pdf" />
+        </div>
+      </div>
+
+      <!-- Inspiration + Photos -->
+      <div class="start-section">
+        <div class="start-label">Style & reference (optional):</div>
+        <div class="start-group">
+          <label class="upload-btn upload-btn-secondary" for="inspiration-input">Inspiration images</label>
+          <input type="file" id="inspiration-input" accept="image/*" multiple />
+          <span class="inspo-status" id="inspo-status"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-bar" id="status-bar">Ready</div>
+
+    <div class="chat-area" id="chat-area">
+      <div class="msg system">Pick a template, describe a room, or upload a photo to start</div>
+    </div>
+
+    <div class="chat-input">
+      <input type="text" id="chat-input"
+        placeholder="Describe changes (e.g. add curtains, change wall to concrete)" disabled />
+      <button class="btn btn-primary" id="send-btn" data-tooltip="Send (Enter)" disabled>Send</button>
+    </div>
+
+    <!-- DGX Services panel -->
+    <div class="dgx-panel" id="dgx-panel">
+      <button class="dgx-toggle" id="dgx-toggle">DGX Services</button>
+      <div class="dgx-body" id="dgx-body" style="display:none">
+        <div class="dgx-actions">
+          <button class="btn btn-sm btn-secondary" id="dgx-start-all">Start All</button>
+          <button class="btn btn-sm btn-secondary" id="dgx-stop-all">Stop All</button>
+        </div>
+        <div class="dgx-list" id="dgx-list"><div class="dgx-loading">Loading...</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right: Render + Drafts -->
+  <div class="right-panel">
+
+    <div class="render-toolbar">
+      <span class="label" id="render-label">No render yet</span>
+      <select id="room-type-select" data-tooltip="Room type for AI style">
+        <option value="">Auto-detect style</option>
+        <option value="salon">Salon</option>
+        <option value="sypialnia">Sypialnia</option>
+        <option value="kuchnia">Kuchnia</option>
+        <option value="lazienka_master">Lazienka Master</option>
+        <option value="lazienka">Lazienka</option>
+        <option value="pokoj_dziecka">Pokoj Dziecka</option>
+        <option value="pokoj_teo">Pokoj Teo</option>
+        <option value="gabinet">Gabinet</option>
+        <option value="garderoba">Garderoba</option>
+        <option value="korytarz">Korytarz</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" id="history-btn" data-tooltip="Render history (H)" disabled>History</button>
+      <button class="btn btn-secondary" id="drafts-btn" data-tooltip="Generate 4 angle drafts (D)" disabled>Drafts (4 angles)</button>
+      <button class="btn btn-primary" id="finalize-btn" data-tooltip="HD render (Ctrl+Enter)" disabled>Finalize HD</button>
+      <button class="btn btn-secondary btn-sm" id="annotate-btn" data-tooltip="Draw to annotate (A)" disabled>Annotate</button>
+    </div>
+
+    <!-- Main render view -->
+    <div class="dual-view" id="dual-view">
+      <div class="canvas-wrapper" id="canvas-wrapper">
+        <div class="placeholder" id="placeholder">
+          <svg class="placeholder-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round">
+            <path class="draw-line" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline class="draw-line" points="9 22 9 12 15 12 15 22" style="animation-delay:0.5s"/>
+          </svg>
+          <div class="placeholder-text">Design your room</div>
+          <div class="placeholder-hint">Choose a template, describe a room, upload a photo, or drag an image here</div>
+        </div>
+        <img id="render-img" alt="Render" />
+        <canvas id="render-canvas"></canvas>
+        <div class="render-spinner" id="render-spinner">
+          <div class="spinner-ring"></div>
+          <span id="spinner-label">Rendering...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drafts gallery -->
+    <div class="drafts-gallery" id="drafts-gallery" style="display:none">
+      <div class="drafts-header">
+        <span id="drafts-label">Drafts</span>
+        <button class="btn btn-sm btn-secondary" id="drafts-close">Close</button>
+      </div>
+      <div class="drafts-grid" id="drafts-grid"></div>
+    </div>
+
+    <div class="annotation-panel" id="annotation-panel">
+      <input type="text" id="annotation-input" placeholder="Describe change for selected area..." />
+      <button class="btn btn-primary" id="annotation-apply" disabled>Apply</button>
+      <button class="btn btn-secondary" id="annotation-cancel">X</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Finalize modal -->
+<div id="finalize-modal" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:800px">
+    <div class="modal-header">
+      <h2>Finalize - High Resolution Render</h2>
+      <button class="btn btn-secondary" id="finalize-close">X</button>
+    </div>
+    <p class="modal-subtitle">Depth-guided ControlNet finalization at 2048px</p>
+    <div class="finalize-controls">
+      <input type="text" id="finalize-style-input" class="finalize-input" placeholder="Style override (optional)" />
+      <select id="finalize-camera" class="finalize-select">
+        <option value="0">Front view</option>
+        <option value="1">Corner left</option>
+        <option value="2">Corner right</option>
+        <option value="3">Side view</option>
+      </select>
+      <button class="btn btn-primary" id="finalize-go">Generate</button>
+    </div>
+    <div id="finalize-result" class="finalize-result">
+      <span class="finalize-empty">Click Generate for high-resolution photorealistic render</span>
+    </div>
+    <!-- Before/After compare (2.3) -->
+    <div id="compare-container" class="compare-container" style="display:none">
+      <div class="compare-label">Before / After</div>
+      <div class="compare-wrapper" id="compare-wrapper">
+        <img id="compare-before" class="compare-img" alt="Before" />
+        <img id="compare-after" class="compare-img compare-after" alt="After" />
+        <div class="compare-slider" id="compare-slider">
+          <div class="compare-handle"></div>
+        </div>
+        <span class="compare-badge compare-badge-left">Blender</span>
+        <span class="compare-badge compare-badge-right">Finalized</span>
+      </div>
+    </div>
+    <div id="finalize-prompt" class="finalize-prompt"></div>
+  </div>
+</div>
+
+<!-- Lightbox (2.2) -->
+<div id="lightbox" class="lightbox-overlay" style="display:none">
+  <img id="lightbox-img" alt="Fullscreen" />
+  <button class="lightbox-close" id="lightbox-close">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <div class="lightbox-nav">
+    <button class="lightbox-nav-btn" id="lightbox-prev">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button class="lightbox-nav-btn" id="lightbox-next">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Keyboard shortcuts modal (2.1) -->
+<div id="shortcuts-modal" class="modal-overlay" style="display:none">
+  <div class="modal shortcuts-modal">
+    <div class="modal-header">
+      <h2>Keyboard Shortcuts</h2>
+      <button class="btn btn-secondary" id="shortcuts-close">X</button>
+    </div>
+    <div class="shortcuts-grid">
+      <div class="shortcut-item"><kbd>?</kbd><span>Show this help</span></div>
+      <div class="shortcut-item"><kbd>Enter</kbd><span>Send chat message</span></div>
+      <div class="shortcut-item"><kbd>Ctrl+Enter</kbd><span>Finalize HD render</span></div>
+      <div class="shortcut-item"><kbd>D</kbd><span>Toggle drafts</span></div>
+      <div class="shortcut-item"><kbd>A</kbd><span>Toggle annotate</span></div>
+      <div class="shortcut-item"><kbd>F</kbd><span>Fullscreen render</span></div>
+      <div class="shortcut-item"><kbd>H</kbd><span>Render history</span></div>
+      <div class="shortcut-item"><kbd>Esc</kbd><span>Close modal/panel</span></div>
+      <div class="shortcut-item"><kbd>←</kbd> <kbd>→</kbd><span>Navigate in lightbox</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- History drawer (3.1) -->
+<div id="history-drawer" class="history-drawer" style="display:none">
+  <div class="history-header">
+    <span>Render History</span>
+    <button class="btn btn-sm btn-secondary" id="history-close">X</button>
+  </div>
+  <div class="history-list" id="history-list">
+    <div class="history-empty">No renders yet</div>
+  </div>
+</div>
+
+<!-- Onboarding overlay (3.5) -->
+<div id="onboarding-overlay" class="onboarding-overlay" style="display:none">
+  <div class="onboarding-spotlight" id="onboarding-spotlight"></div>
+  <div class="onboarding-tooltip" id="onboarding-tooltip">
+    <div class="onboarding-text" id="onboarding-text"></div>
+    <div class="onboarding-actions">
+      <span class="onboarding-step" id="onboarding-step"></span>
+      <button class="btn btn-sm btn-secondary" id="onboarding-skip">Skip</button>
+      <button class="btn btn-sm btn-primary" id="onboarding-next">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confetti canvas (4.6) -->
+<canvas id="confetti-canvas"></canvas>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

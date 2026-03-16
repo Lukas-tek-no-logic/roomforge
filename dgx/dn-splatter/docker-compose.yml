@@ -1,0 +1,24 @@
+services:
+  dn-splatter:
+    build: .
+    ports:
+      - "8004:8000"
+    volumes:
+      - /home/luok/.cache/huggingface:/root/.cache/huggingface
+      # Mount sessions dir so DN-Splatter can access frames directly
+      - /home/luok/Projects/washing_room/sessions:/data/sessions
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    shm_size: 4gb
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped

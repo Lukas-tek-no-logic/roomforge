@@ -1,0 +1,30 @@
+services:
+  flux:
+    build: .
+    ports:
+      - "8001:8000"
+    volumes:
+      - /home/luok/.cache/huggingface:/root/.cache/huggingface
+    environment:
+      - FLUX_MODEL=black-forest-labs/FLUX.1-schnell
+      - FLUX_DEPTH_MODEL=jasperai/Flux.1-dev-Controlnet-Depth
+      - FLUX_PREVIEW_MODEL=
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+      - HF_TOKEN=${HF_TOKEN}
+    env_file:
+      - .env
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    shm_size: 4gb
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped

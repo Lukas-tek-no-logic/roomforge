@@ -1,0 +1,23 @@
+{
+  "room_type": "pokoj_dziecka",
+  "room_label": "Pokój Dziecka (Child's Room — Dinosaur Theme)",
+  "room": {"width": 3.5, "depth": 2.6, "height": 2.7},
+  "walls": {"color": "#EEECEA", "material": "paint", "texture_roughness": 0.10},
+  "floor": {"color": "#C49A6C", "material": "wood", "texture_roughness": 0.35},
+  "ceiling": {"color": "#FFFFFF", "height": 2.7},
+  "furniture": [
+    {"id": "bed_child", "type": "bed", "label": "Platform bed 90x200cm with integrated storage drawers, patterned bedding", "position": {"x": 0.8, "y": 0.8, "z": 0.0}, "size": {"width": 1.06, "depth": 2.10, "height": 0.45}, "color": "#D4D0CC", "material": "wood"},
+    {"id": "wardrobe_teal", "type": "wardrobe", "label": "Built-in wardrobe with teal-colored doors and indirect LED underlight", "position": {"x": -1.4, "y": 0.0, "z": 0.0}, "size": {"width": 1.40, "depth": 0.60, "height": 2.60}, "color": "#5B8A8A", "material": "wood"},
+    {"id": "desk_child", "type": "desk", "label": "Child's desk with shelves by the window", "position": {"x": 0.0, "y": -0.9, "z": 0.0}, "size": {"width": 1.05, "depth": 0.60, "height": 0.72}, "color": "#F5F0E8", "material": "wood"},
+    {"id": "chair_child", "type": "chair", "label": "Small desk chair", "position": {"x": 0.0, "y": -0.4, "z": 0.0}, "size": {"width": 0.45, "depth": 0.45, "height": 0.75}, "color": "#E8E5E0", "material": "plastic"},
+    {"id": "climbing_wall", "type": "decor", "label": "Wooden climbing ladder (drabinka gimnastyczna) with rope, gymnastics mat below", "position": {"x": -1.4, "y": 1.0, "z": 0.0}, "size": {"width": 0.80, "depth": 0.15, "height": 2.40}, "color": "#C4A67D", "material": "wood"},
+    {"id": "wall_mural", "type": "wall_art", "label": "Full-wall pencil sketch mural of dinosaur landscape with trees, mountains, and pterodactyls", "position": {"x": 0.8, "y": 1.27, "z": 1.35}, "size": {"width": 3.50, "depth": 0.02, "height": 2.70}, "color": "#F0EDE8", "material": "generic"},
+    {"id": "pendant_balloon", "type": "lamp", "label": "Hot air balloon pendant light with rope cage structure", "position": {"x": 0.0, "y": 0.5, "z": 2.20}, "size": {"width": 0.40, "depth": 0.40, "height": 0.50}, "color": "#F5F0E8", "material": "fabric"},
+    {"id": "bean_bag", "type": "ottoman", "label": "Light blue bean bag / pouf", "position": {"x": 0.3, "y": -0.3, "z": 0.0}, "size": {"width": 0.60, "depth": 0.60, "height": 0.40}, "color": "#A8D8E8", "material": "fabric"}
+  ],
+  "openings": [
+    {"type": "window", "wall": "south", "position_along_wall": 0.50, "width": 1.10, "height": 1.40, "bottom_height": 0.80},
+    {"type": "door", "wall": "north", "position_along_wall": 0.20, "width": 0.80, "height": 2.10, "bottom_height": 0.0}
+  ],
+  "lighting": {"type": "natural", "intensity": 3.0, "color": "#FFFAE8"}
+}
