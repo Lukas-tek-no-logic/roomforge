@@ -86,17 +86,23 @@ echo ""
 echo -e "${YELLOW}[2/5] Configure services${NC}"
 echo ""
 echo "  RoomForge connects to GPU services on DGX Spark"
-echo "  and uses Claude API for AI chat."
+echo "  and uses Claude CLI for AI chat (OAuth — no API key needed)."
 echo ""
 
 DEFAULT_DGX="192.168.0.200"
 echo -e "  DGX Spark IP (default: ${BLUE}$DEFAULT_DGX${NC})"
 DGX_HOST=$(ask "  DGX Host [$DEFAULT_DGX]: " "$DEFAULT_DGX")
 
-DEFAULT_KEY=""
-echo ""
-echo -e "  Anthropic API key (for Claude AI chat)"
-ANTHROPIC_KEY=$(ask "  API Key [skip to set later]: " "$DEFAULT_KEY")
+# Check Claude CLI
+if command -v claude &>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} Claude CLI found (AI chat via OAuth)"
+    ANTHROPIC_KEY=""
+else
+    echo -e "  ${YELLOW}!${NC} Claude CLI not found — AI chat won't work without it"
+    echo "    Install: https://docs.anthropic.com/en/docs/claude-code"
+    echo "    Or set ANTHROPIC_API_KEY manually in .env later"
+    ANTHROPIC_KEY=""
+fi
 
 # Verify DGX connectivity
 echo ""
@@ -193,7 +199,9 @@ echo -e "  ${GREEN}✓${NC} Python venv + dependencies"
 # Write .env
 cat > "$INSTALL_DIR/.env" << ENVEOF
 DGX_HOST=$DGX_HOST
-ANTHROPIC_API_KEY=$ANTHROPIC_KEY
+# Claude CLI (OAuth) is used by default — no API key needed.
+# Set this only if you want to use the SDK directly:
+# ANTHROPIC_API_KEY=
 HOST=0.0.0.0
 PORT=$PORT
 ENVEOF
@@ -386,8 +394,8 @@ IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 echo "Web UI: http://${IP:-localhost}:${PORT}"
 echo "Install: $INSTALL_DIR"
 echo ""
-if [ -z "$ANTHROPIC_KEY" ]; then
-    echo -e "${YELLOW}Don't forget to set ANTHROPIC_API_KEY:${NC}"
-    echo "  roomforge config"
+if ! command -v claude &>/dev/null; then
+    echo -e "${YELLOW}Install Claude CLI for AI chat:${NC}"
+    echo "  https://docs.anthropic.com/en/docs/claude-code"
     echo ""
 fi
