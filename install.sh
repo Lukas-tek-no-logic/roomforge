@@ -66,10 +66,10 @@ fi
 
 if ! $PY -m venv --help &>/dev/null; then
     echo -e "  ${YELLOW}Installing python3-venv...${NC}"
-    sudo apt-get install -y -qq python3-venv 2>/dev/null || {
-        echo -e "  ${RED}ERROR: python3-venv not available. Install manually.${NC}"
-        exit 1
-    }
+    # Try version-specific package first (e.g. python3.11-venv), then generic
+    apt-get install -y -qq "python${PY_VER}-venv" 2>/dev/null \
+        || apt-get install -y -qq python3-venv 2>/dev/null \
+        || { echo -e "  ${RED}ERROR: Install manually: apt install python${PY_VER}-venv${NC}"; exit 1; }
 fi
 echo -e "  ${GREEN}✓${NC} python3-venv"
 
