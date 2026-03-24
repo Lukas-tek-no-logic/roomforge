@@ -333,5 +333,12 @@ def blender_available() -> bool:
     """True if Blender is available (local OR DGX remote)."""
     if shutil.which(BLENDER_BIN) is not None:
         return True
-    # No local Blender — check if DGX Blender is cached as available
+    # No local Blender — check DGX (sync probe if not yet cached)
+    if _dgx_blender_available is None:
+        try:
+            import httpx as _httpx
+            resp = _httpx.get(f"{DGX_BLENDER_URL}/health", timeout=3.0)
+            return resp.status_code == 200 and resp.json().get("status") == "ok"
+        except Exception:
+            return False
     return _dgx_blender_available is True
