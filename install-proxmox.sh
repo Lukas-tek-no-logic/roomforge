@@ -184,7 +184,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 # System packages
 apt-get update -qq
-apt-get install -y -qq python3 python3-venv curl >/dev/null 2>&1
+apt-get install -y -qq python3 python3-venv curl ffmpeg >/dev/null 2>&1
 
 # Detect Python version for venv package
 PY_VER=\$(python3 --version 2>&1 | grep -oP '\d+\.\d+')
