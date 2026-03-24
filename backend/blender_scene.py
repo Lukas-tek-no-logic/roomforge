@@ -70,9 +70,7 @@ MATERIAL_TEXTURES = {
         "brown_leather",
         "leather_white",
     ],
-    "metal": [
-        "metal_plate",
-    ],
+    # metal: procedural only (Polyhaven metal_plate looks like wood)
     "ceramic": [
         "marble_mosaic_tiles",
         "white_ceramic_tiles",
@@ -692,7 +690,9 @@ def _make_shelf(name, x, y, z0, fw, fd, fh, color_hex, roughness, mat_type, tex_
 def _make_pipe(name, x, y, z0, fw, fd, fh, color_hex, roughness, mat_type, tex_cache):
     """Pipe as a cylinder — auto-detects orientation from dimensions."""
     import bpy
-    mat = make_material(f"mat_{name}", color_hex, roughness, mat_type, tex_cache)
+    # Pipes: always procedural (textures look wrong on thin cylinders)
+    pipe_mat = "plastic" if mat_type == "plastic" else "metal"
+    mat = make_material(f"mat_{name}", color_hex, max(roughness, 0.2), pipe_mat, tex_cache)
 
     if fw >= max(fh, fd):  # horizontal along X
         r = max(min(fd, fh) / 2, 0.02)
@@ -1604,44 +1604,40 @@ def _build_walls_with_openings(openings, W, D, H, wall_color, wall_rough, wall_m
                         _set(bsdf, "Transmission Weight", 0.95)
                         _set(bsdf, "IOR", 1.5)
 
-                # Glass pane
+                # Glass pane — place as flat cube aligned to wall
+                # For N/S walls: flat in Y. For E/W walls: flat in X.
+                is_ns = "pos_y" in spec
                 bpy.ops.mesh.primitive_cube_add(size=1, location=glass_loc)
                 glass = bpy.context.active_object
                 glass.name = f"window_{wname}_{seg_idx}"
-                glass.scale = (ow - 0.06, 0.01, oh - 0.06)
-                glass.rotation_euler = rot
+                if is_ns:
+                    glass.scale = (ow - 0.06, 0.005, oh - 0.06)
+                else:
+                    glass.scale = (0.005, ow - 0.06, oh - 0.06)
                 glass.data.materials.append(glass_mat)
 
-                # Window frame (simple border)
-                frame_mat = make_material(f"mat_frame_{wname}", "#8B7355", 0.4, "wood",
+                # Window frame (brown wood border)
+                frame_mat = make_material(f"mat_frame_{wname}", "#8B7355", 0.4, "paint",
                                           texture_cache)
-                # Top frame
-                top_loc, _ = _loc(cu, v_top, 0, 0)
-                bpy.ops.mesh.primitive_cube_add(size=1, location=top_loc)
-                fr = bpy.context.active_object
-                fr.name = f"frame_{wname}_top"
-                fr.scale = (ow + 0.04, 0.05, 0.03)
-                fr.rotation_euler = rot
-                fr.data.materials.append(frame_mat)
+                frame_t = 0.04  # frame thickness
+                frame_d = 0.04  # frame depth
 
-                # Bottom frame / sill
-                bot_loc, _ = _loc(cu, v_bottom, 0, 0)
-                bpy.ops.mesh.primitive_cube_add(size=1, location=bot_loc)
-                sill = bpy.context.active_object
-                sill.name = f"sill_{wname}"
-                sill.scale = (ow + 0.06, 0.08, 0.03)
-                sill.rotation_euler = rot
-                sill.data.materials.append(frame_mat)
-
-                # Side frames
-                for side, u_pos in [("left", u_left), ("right", u_right)]:
-                    side_loc, _ = _loc(u_pos, cv, 0, 0)
-                    bpy.ops.mesh.primitive_cube_add(size=1, location=side_loc)
-                    sf = bpy.context.active_object
-                    sf.name = f"frame_{wname}_{side}"
-                    sf.scale = (0.03, 0.05, oh + 0.04)
-                    sf.rotation_euler = rot
-                    sf.data.materials.append(frame_mat)
+                # 4 frame pieces: top, bottom/sill, left, right
+                for fname, fu, fv, fsx, fsz in [
+                    ("top",   cu,      v_top,    ow + frame_t, frame_t),
+                    ("sill",  cu,      v_bottom, ow + frame_t*2, frame_t),
+                    ("left",  u_left,  cv,       frame_t,  oh + frame_t),
+                    ("right", u_right, cv,       frame_t,  oh + frame_t),
+                ]:
+                    floc, _ = _loc(fu, fv, 0, 0)
+                    bpy.ops.mesh.primitive_cube_add(size=1, location=floc)
+                    fr = bpy.context.active_object
+                    fr.name = f"frame_{wname}_{fname}"
+                    if is_ns:
+                        fr.scale = (fsx, frame_d, fsz)
+                    else:
+                        fr.scale = (frame_d, fsx, fsz)
+                    fr.data.materials.append(frame_mat)
 
             elif otype == "door":
                 door_mat = make_material(f"mat_door_{wname}", "#D2B48C", 0.5, "wood",
@@ -1649,8 +1645,11 @@ def _build_walls_with_openings(openings, W, D, H, wall_color, wall_rough, wall_m
                 bpy.ops.mesh.primitive_cube_add(size=1, location=glass_loc)
                 door = bpy.context.active_object
                 door.name = f"door_{wname}"
-                door.scale = (ow - 0.04, 0.04, oh - 0.02)
-                door.rotation_euler = rot
+                is_ns = "pos_y" in spec
+                if is_ns:
+                    door.scale = (ow - 0.04, 0.04, oh - 0.02)
+                else:
+                    door.scale = (0.04, ow - 0.04, oh - 0.02)
                 door.data.materials.append(door_mat)
 
             prev_right = u_right
