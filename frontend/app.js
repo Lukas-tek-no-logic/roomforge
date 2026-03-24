@@ -377,9 +377,13 @@ async function generateFromDescription() {
 // ── Upload photo ──────────────────────────────────────────────────────
 
 fileInput.addEventListener("change", async () => {
-  const file = fileInput.files[0];
-  if (!file) return;
-  await handlePhotoUpload(file);
+  const files = fileInput.files;
+  if (!files.length) return;
+  // Upload first photo for analysis, rest as additional references
+  await handlePhotoUpload(files[0]);
+  for (let i = 1; i < files.length; i++) {
+    await handleAdditionalPhoto(files[i]);
+  }
 });
 
 async function handlePhotoUpload(file) {
@@ -401,6 +405,59 @@ async function handlePhotoUpload(file) {
     if (!res.ok) throw new Error(data.detail);
     addMsg("ai", "Photo analyzed! Rendering 3D scene...");
     setProgress(40);
+    startPolling();
+  } catch (e) {
+    setStatus(`Error: ${e.message}`, "error");
+    addMsg("system", `Error: ${e.message}`);
+    hideSpinner();
+    enableChat();
+    removeTypingIndicator();
+    setProgress(0);
+    playSound("error");
+  }
+}
+
+async function handleAdditionalPhoto(file) {
+  addMsg("system", `Uploading additional photo: ${file.name}`);
+  const form = new FormData();
+  form.append("file", file);
+  try {
+    await fetch(`/sessions/${state.sessionId}/upload-inspiration`, { method: "POST", body: form });
+    addMsg("system", `Added: ${file.name}`);
+  } catch (e) {
+    addMsg("system", `Failed: ${file.name}`);
+  }
+}
+
+// ── Upload video (3D reconstruction) ──────────────────────────────────
+
+const videoInput = document.getElementById("video-input");
+
+videoInput.addEventListener("change", async () => {
+  const file = videoInput.files[0];
+  if (!file) return;
+  await handleVideoUpload(file);
+});
+
+async function handleVideoUpload(file) {
+  addMsg("system", `Uploading video: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`);
+  setStatus("Uploading video for 3D reconstruction...", "rendering");
+  showSpinner("DN-Splatter is reconstructing 3D from video...");
+  setProgress(5);
+  disableChat();
+  showTypingIndicator();
+  playSound("click");
+  state.lastCommand = `Video: ${file.name}`;
+
+  const form = new FormData();
+  form.append("file", file);
+
+  try {
+    const res = await fetch(`/sessions/${state.sessionId}/upload-video`, { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail);
+    addMsg("ai", "Video uploaded! Reconstructing 3D model — this takes 2-10 minutes...");
+    setProgress(10);
     startPolling();
   } catch (e) {
     setStatus(`Error: ${e.message}`, "error");

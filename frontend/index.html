@@ -78,14 +78,20 @@
 
         <!-- Option 3: Upload photo -->
         <div class="start-group">
-          <label class="upload-btn" for="file-input">Upload room photo</label>
-          <input type="file" id="file-input" accept="image/*" />
+          <label class="upload-btn" for="file-input">Upload room photo(s)</label>
+          <input type="file" id="file-input" accept="image/*" multiple />
         </div>
 
         <!-- Option 4: Floor plan -->
         <div class="start-group">
           <label class="upload-btn upload-btn-secondary" for="floorplan-input">Upload floor plan (PDF/image)</label>
           <input type="file" id="floorplan-input" accept="image/*,.pdf" />
+        </div>
+
+        <!-- Option 5: Room video (3D reconstruction) -->
+        <div class="start-group">
+          <label class="upload-btn upload-btn-secondary" for="video-input">Upload room video (3D scan)</label>
+          <input type="file" id="video-input" accept="video/*" />
         </div>
       </div>
 
