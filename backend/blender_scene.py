@@ -1155,22 +1155,24 @@ def place_furniture(item, tex_cache, furniture_glb_dir="", room_w=None, room_d=N
         half_d = room_d / 2
 
         if item_type in wall_types:
-            # Find which wall is closest and snap to it
+            # Nudge toward nearest wall if within 0.5m (don't teleport across room)
             dist_to_walls = [
-                ("north", half_d - y),
-                ("south", y + half_d),
-                ("east",  half_w - x),
-                ("west",  x + half_w),
+                ("north", half_d - y - fd/2),
+                ("south", y + half_d - fd/2),
+                ("east",  half_w - x - fw/2),
+                ("west",  x + half_w - fw/2),
             ]
-            nearest_wall = min(dist_to_walls, key=lambda w: w[1])[0]
-            if nearest_wall == "north":
-                y = half_d - fd / 2 - 0.02
-            elif nearest_wall == "south":
-                y = -half_d + fd / 2 + 0.02
-            elif nearest_wall == "east":
-                x = half_w - fw / 2 - 0.02
-            elif nearest_wall == "west":
-                x = -half_w + fw / 2 + 0.02
+            nearest_wall, nearest_dist = min(dist_to_walls, key=lambda w: w[1])
+            if nearest_dist < 0.6:  # only snap if already close to wall
+                gap = 0.03
+                if nearest_wall == "north":
+                    y = half_d - fd / 2 - gap
+                elif nearest_wall == "south":
+                    y = -half_d + fd / 2 + gap
+                elif nearest_wall == "east":
+                    x = half_w - fw / 2 - gap
+                elif nearest_wall == "west":
+                    x = -half_w + fw / 2 + gap
 
         # Pipes: snap to nearest wall (they run along walls)
         if item_type == "pipe":
@@ -1411,15 +1413,26 @@ def _setup_camera(bpy, W: float, D: float, H: float, camera_id: int = 0,
             cz = H * 0.35
 
     if camera_id == 0 and furniture_data:
-        # Auto-select: pick corner farthest from furniture centroid
+        # Auto-select: pick corner that sees most furniture in front
+        # Score = how many furniture items are "in front" of this corner
         best_corner = 0
-        best_dist = -1
-        for i, (sx, sy) in enumerate(CAMERA_CORNERS):
-            corner_x = sx * (W / 2 - buf)
-            corner_y = sy * (D / 2 - buf)
-            dist = math.sqrt((corner_x - cx) ** 2 + (corner_y - cy) ** 2)
-            if dist > best_dist:
-                best_dist = dist
+        best_score = -1
+        for i, (csx, csy) in enumerate(CAMERA_CORNERS):
+            corner_x = csx * (W / 2 - buf)
+            corner_y = csy * (D / 2 - buf)
+            # Direction from corner to center
+            dx, dy = -csx, -csy  # look toward room center
+            score = 0
+            for item in furniture_data:
+                pos = item.get("position", {})
+                fx = float(pos.get("x", 0)) - corner_x
+                fy = float(pos.get("y", 0)) - corner_y
+                # Dot product: positive = item is in front of camera
+                dot = fx * dx + fy * dy
+                if dot > 0:
+                    score += 1
+            if score > best_score:
+                best_score = score
                 best_corner = i
         sx, sy = CAMERA_CORNERS[best_corner]
     else:
