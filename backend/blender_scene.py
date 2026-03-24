@@ -1146,12 +1146,52 @@ def place_furniture(item, tex_cache, furniture_glb_dir="", room_w=None, room_d=N
     if item_type == "pipe" and fw > max(fh, fd) and room_h:
         z0 = min(z0, room_h - 0.05)
 
-    # Clamp furniture position to stay within room bounds
+    # Snap wall-hugging items to nearest wall
+    wall_types = {"washing_machine", "washer", "radiator", "heater", "dryer",
+                  "sink", "cabinet", "wardrobe", "dresser", "bookshelf", "tv_stand",
+                  "sideboard", "console"}
     if room_w is not None and room_d is not None:
-        half_w = room_w / 2 - 0.05
-        half_d = room_d / 2 - 0.05
-        x = max(-half_w + fw / 2, min(half_w - fw / 2, x))
-        y = max(-half_d + fd / 2, min(half_d - fd / 2, y))
+        half_w = room_w / 2
+        half_d = room_d / 2
+
+        if item_type in wall_types:
+            # Find which wall is closest and snap to it
+            dist_to_walls = [
+                ("north", half_d - y),
+                ("south", y + half_d),
+                ("east",  half_w - x),
+                ("west",  x + half_w),
+            ]
+            nearest_wall = min(dist_to_walls, key=lambda w: w[1])[0]
+            if nearest_wall == "north":
+                y = half_d - fd / 2 - 0.02
+            elif nearest_wall == "south":
+                y = -half_d + fd / 2 + 0.02
+            elif nearest_wall == "east":
+                x = half_w - fw / 2 - 0.02
+            elif nearest_wall == "west":
+                x = -half_w + fw / 2 + 0.02
+
+        # Pipes: snap to nearest wall (they run along walls)
+        if item_type == "pipe":
+            dist_n = half_d - y
+            dist_s = y + half_d
+            dist_e = half_w - x
+            dist_w = x + half_w
+            min_dist = min(dist_n, dist_s, dist_e, dist_w)
+            wall_gap = 0.05
+            if min_dist == dist_n:
+                y = half_d - wall_gap
+            elif min_dist == dist_s:
+                y = -half_d + wall_gap
+            elif min_dist == dist_e:
+                x = half_w - wall_gap
+            elif min_dist == dist_w:
+                x = -half_w + wall_gap
+
+        # Clamp all items to stay within room bounds
+        x = max(-half_w + fw / 2 + 0.02, min(half_w - fw / 2 - 0.02, x))
+        y = max(-half_d + fd / 2 + 0.02, min(half_d - fd / 2 - 0.02, y))
 
     # Phase 4: Try importing real 3D model (GLB) from TRELLIS.2
     if furniture_glb_dir:
