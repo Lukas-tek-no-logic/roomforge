@@ -1027,7 +1027,12 @@ def _make_vase(name, x, y, z0, fw, fd, fh, color_hex, roughness, mat_type, tex_c
 def _make_decor(name, x, y, z0, fw, fd, fh, color_hex, roughness, mat_type, tex_cache):
     """Smart decor: picks shape based on proportions and material."""
     import bpy
-    mat = make_material(f"mat_{name}", color_hex, roughness, mat_type, tex_cache)
+    # Small items: use procedural material (Polyhaven textures have wrong scale)
+    vol = fw * fd * fh
+    if vol < 0.05:
+        mat = make_material(f"mat_{name}", color_hex, roughness, "paint", tex_cache)
+    else:
+        mat = make_material(f"mat_{name}", color_hex, roughness, mat_type, tex_cache)
 
     # Very flat → rug/mat
     if fh <= 0.04:
@@ -1096,6 +1101,14 @@ def place_furniture(item, tex_cache, furniture_glb_dir="", room_w=None, room_d=N
     fh = float(size.get("height", 0.85))
     name = item.get("id", item_type)
 
+    # Floor-standing items: force z=0 unless explicitly elevated (shelves, pipes, wall items)
+    floor_types = {"washing_machine", "washer", "dryer", "sofa", "couch", "armchair",
+                   "chair", "table", "bed", "cabinet", "bookshelf", "tv_stand",
+                   "sideboard", "console", "wardrobe", "dresser", "nightstand",
+                   "stool", "ottoman", "plant", "basket", "decor", "vase", "rug", "carpet"}
+    if item_type in floor_types and z0 > 0.1 and z0 < fh:
+        z0 = 0.0
+
     # Clamp furniture position to stay within room bounds
     if room_w is not None and room_d is not None:
         half_w = room_w / 2 - 0.05
@@ -1113,7 +1126,7 @@ def place_furniture(item, tex_cache, furniture_glb_dir="", room_w=None, room_d=N
     # Shape builders by type
     shape_builders = {
         "washing_machine": _make_washer,
-        "dryer":           _make_washer,
+        "dryer":           _make_decor,  # dryer/radiator — use smart shape heuristic
         "shelf":           _make_shelf,
         "pipe":            _make_pipe,
         "sofa":            _make_sofa,
@@ -1291,11 +1304,13 @@ def _setup_camera(bpy, W: float, D: float, H: float, camera_id: int = 0,
     """Smart camera: picks best corner to see most furniture, or uses camera_id preset."""
     import mathutils
 
-    buf = 0.3  # distance from wall
-    eye_h = min(H * 0.50, 1.55)
-    lens = max(16, min(26, 22 - (max(W, D) - 4) * 1.5))
+    buf = 0.25  # distance from wall
+    eye_h = min(H * 0.45, 1.50)
+    # Wider FOV for small rooms, narrower for large
+    room_diag = math.sqrt(W**2 + D**2)
+    lens = max(14, min(22, 18 - (room_diag - 5) * 1.2))
 
-    # Calculate furniture centroid (if available)
+    # Target: blend between room center and furniture centroid
     cx, cy, cz = 0.0, 0.0, H * 0.35
     if furniture_data:
         positions = []
@@ -1307,10 +1322,12 @@ def _setup_camera(bpy, W: float, D: float, H: float, camera_id: int = 0,
             pz = float(pos.get("z", 0)) + float(sz.get("height", 0.5)) * 0.5
             positions.append((px, py, pz))
         if positions:
-            cx = sum(p[0] for p in positions) / len(positions)
-            cy = sum(p[1] for p in positions) / len(positions)
-            cz = sum(p[2] for p in positions) / len(positions)
-            cz = min(cz, H * 0.6)  # don't aim too high
+            fcx = sum(p[0] for p in positions) / len(positions)
+            fcy = sum(p[1] for p in positions) / len(positions)
+            # Blend 60% room center + 40% furniture centroid
+            cx = fcx * 0.4
+            cy = fcy * 0.4
+            cz = H * 0.35
 
     if camera_id == 0 and furniture_data:
         # Auto-select: pick corner farthest from furniture centroid
@@ -1752,26 +1769,30 @@ def build_scene(data: dict, session_dir: str = ""):
     fixture_mat.node_tree.links.new(emit.outputs[0], out.inputs[0])
     fixture.data.materials.append(fixture_mat)
 
-    # Main ceiling area light
-    bpy.ops.object.light_add(type="AREA", location=(0, 0, H - 0.08))
-    key = bpy.context.active_object
-    key.data.energy = intensity * 200
-    key.data.size   = min(5.0, min(W, D) * 0.6)
-    key.data.color  = lc
+    # Main ceiling area light — smaller = harder shadows
+    light_type = lighting.get("type", "ceiling_lamp")
+    if light_type == "fluorescent":
+        # Long rectangular fluorescent tube
+        bpy.ops.object.light_add(type="AREA", location=(0, 0, H - 0.08))
+        key = bpy.context.active_object
+        key.data.energy = intensity * 150
+        key.data.size = 0.12
+        key.data.size_y = min(W, D) * 0.4
+        key.data.color = lc
+    else:
+        bpy.ops.object.light_add(type="AREA", location=(0, 0, H - 0.08))
+        key = bpy.context.active_object
+        key.data.energy = intensity * 150
+        key.data.size = min(3.0, min(W, D) * 0.4)
+        key.data.color = lc
     key.rotation_euler = (0, 0, 0)
 
-    # Front fill (soft)
+    # Subtle ambient fill (very low — keeps shadows visible)
     bpy.ops.object.light_add(type="AREA", location=(0, -D * 0.45, H * 0.5))
     fill = bpy.context.active_object
-    fill.data.energy = intensity * 40
-    fill.data.size   = D * 0.5
+    fill.data.energy = intensity * 15
+    fill.data.size = D * 0.6
     fill.rotation_euler = (math.pi / 2, 0, 0)
-
-    # Rim light from side
-    bpy.ops.object.light_add(type="POINT", location=(W * 0.45, D * 0.3, H * 0.85))
-    rim = bpy.context.active_object
-    rim.data.energy = intensity * 30
-    rim.data.color  = (0.8, 0.9, 1.0)
 
     # ── World / HDRI ──
     scene = bpy.context.scene
