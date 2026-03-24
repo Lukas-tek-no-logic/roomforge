@@ -1,8 +1,41 @@
 from .claude_api import ask_with_image, parse_json
 
-ANALYZE_PROMPT = """You are a 3D scene description expert. Analyze the laundry room image and extract a detailed JSON description.
+ANALYZE_PROMPT = """You are a 3D scene reconstruction expert. Analyze this room photo and produce a JSON description that will be used to build a 3D Blender scene.
 
-Return ONLY valid JSON (no markdown, no explanation) with this exact structure:
+CRITICAL RULES:
+- All floor-standing items MUST have z=0 (z is only > 0 for wall-mounted or elevated items like pipes, shelves on walls, wall art)
+- Position: x=left-right, y=front-back (camera looks from -y toward +y). Room center is x=0, y=0. Floor is z=0.
+- Estimate realistic metric dimensions.
+- Include ALL visible objects, even small ones.
+
+Available furniture types and what they render as:
+- "washing_machine" → white box with round porthole
+- "sink" → ceramic basin
+- "shelf" → horizontal planks
+- "cabinet" → box with wood texture
+- "bookshelf" → grid of compartments
+- "pipe" → cylinder (auto-detects vertical/horizontal from size — set width>height for horizontal pipes)
+- "radiator" → flat metal panel with grid lines
+- "sofa"/"couch" → L-shaped cushioned form
+- "armchair"/"chair" → seat + backrest
+- "bed" → frame + mattress + headboard
+- "table"/"desk" → top surface on legs
+- "tv" → flat black screen + stand
+- "lamp"/"floor_lamp" → pole + shade
+- "plant" → pot + foliage sphere
+- "mirror" → reflective flat panel
+- "rug"/"carpet" → flat plane on floor
+- "curtain" → draped fabric panels
+- "vase" → tapered ceramic cylinder
+- "wall_art"/"painting" → frame + canvas on wall
+- "basket" → cylindrical fabric container
+- "decor" → smart fallback: thin items→panels, flat items→rugs, tall thin→poles, fabric→soft cylinders, default→beveled box
+
+DO NOT use "dryer" for radiators/heaters — use "radiator" or "decor" with material="metal".
+DO NOT use "cabinet" for cardboard boxes — use "decor" with material="generic".
+For pipes: set size.width > size.height for HORIZONTAL pipes, size.height > size.width for VERTICAL.
+
+Return ONLY valid JSON:
 {{
   "room": {{
     "width": <float, meters>,
@@ -10,12 +43,12 @@ Return ONLY valid JSON (no markdown, no explanation) with this exact structure:
     "height": <float, meters>
   }},
   "walls": {{
-    "color": "<hex color like #E8E8E8>",
+    "color": "<hex color — match actual wall color from photo>",
     "material": "<paint|tile|brick|concrete>",
     "texture_roughness": <0.0-1.0>
   }},
   "floor": {{
-    "color": "<hex color>",
+    "color": "<hex color — match actual floor>",
     "material": "<tile|wood|concrete|vinyl>",
     "texture_roughness": <0.0-1.0>
   }},
@@ -25,110 +58,54 @@ Return ONLY valid JSON (no markdown, no explanation) with this exact structure:
   }},
   "furniture": [
     {{
-      "id": "<unique_id like washing_machine_1>",
-      "type": "<sofa|armchair|chair|table|shelf|bookshelf|cabinet|bed|desk|tv|tv_stand|lamp|floor_lamp|table_lamp|plant|mirror|rug|carpet|wall_art|painting|picture|poster|clock|curtain|drapes|vase|washing_machine|dryer|sink|basket|pipe|decor|ottoman|stool|sideboard|console|nightstand|wardrobe|dresser>",
-      "label": "<human readable name>",
-      "position": {{"x": <float>, "y": <float>, "z": <float>}},
-      "size": {{"width": <float>, "depth": <float>, "height": <float>}},
-      "color": "<hex color>",
-      "material": "<metal|plastic|wood|ceramic|fabric|leather|glass|wicker|organic|generic>",
-      "bbox": [<x1_norm>, <y1_norm>, <x2_norm>, <y2_norm>]
-    }}
-  ],
-  "openings": [
-    {{
-      "type": "<door|window>",
-      "wall": "<north|south|east|west>",
-      "position_along_wall": <float, 0.0-1.0>,
-      "width": <float>,
-      "height": <float>,
-      "bottom_height": <float>
-    }}
-  ],
-  "lighting": {{
-    "type": "<ceiling_lamp|fluorescent|natural|none>",
-    "intensity": <0.0-5.0>,
-    "color": "<hex color>"
-  }},
-  "surface_crops": [
-    {{
-      "type": "<floor|wall|wall_north|wall_south|wall_east|wall_west|ceiling>",
-      "bbox": [<x1_norm>, <y1_norm>, <x2_norm>, <y2_norm>]
-    }}
-  ]
-}}
-
-Important:
-- Estimate reasonable metric dimensions. Place furniture with x=left-right, y=depth(front-back), z=up. Room center is (0,0) for x,y; floor at z=0.
-- Include all visible objects.
-- For each furniture item, include "bbox" with normalized bounding box coordinates [x1, y1, x2, y2] where values are 0.0-1.0 relative to the image dimensions.
-- For "surface_crops", identify visible surface areas NOT blocked by furniture. These are used to extract material textures. Include bounding boxes as normalized 0.0-1.0 coordinates."""
-
-
-ANALYZE_WITH_GEOMETRY_PROMPT = """You are a 3D scene description expert. The room has already been 3D-reconstructed from video.
-
-Known room dimensions: {width}m wide x {depth}m deep x {height}m tall.
-
-Analyze the representative frame and extract materials, furniture, and lighting.
-You do NOT need to estimate room dimensions -- they are already known from 3D reconstruction.
-
-Return ONLY valid JSON (no markdown, no explanation) with this exact structure:
-{{
-  "room": {{
-    "width": {width},
-    "depth": {depth},
-    "height": {height}
-  }},
-  "walls": {{
-    "color": "<hex color>",
-    "material": "<paint|tile|brick|concrete>",
-    "texture_roughness": <0.0-1.0>
-  }},
-  "floor": {{
-    "color": "<hex color>",
-    "material": "<tile|wood|concrete|vinyl>",
-    "texture_roughness": <0.0-1.0>
-  }},
-  "ceiling": {{
-    "color": "<hex color>",
-    "height": {height}
-  }},
-  "furniture": [
-    {{
       "id": "<unique_id>",
-      "type": "<sofa|armchair|chair|table|shelf|bookshelf|cabinet|bed|desk|tv|tv_stand|lamp|floor_lamp|table_lamp|plant|mirror|rug|carpet|wall_art|painting|picture|poster|clock|curtain|drapes|vase|washing_machine|dryer|sink|basket|pipe|decor|ottoman|stool|sideboard|console|nightstand|wardrobe|dresser>",
-      "label": "<human readable name>",
-      "position": {{"x": <float>, "y": <float>, "z": <float>}},
+      "type": "<from list above>",
+      "label": "<detailed description for rendering>",
+      "position": {{"x": <float>, "y": <float>, "z": <float, 0 for floor items>}},
       "size": {{"width": <float>, "depth": <float>, "height": <float>}},
-      "color": "<hex color>",
-      "material": "<metal|plastic|wood|ceramic|fabric|leather|glass|wicker|organic|generic>",
+      "color": "<hex color — match actual color from photo>",
+      "material": "<metal|plastic|wood|ceramic|fabric|leather|glass|generic>",
       "bbox": [<x1_norm>, <y1_norm>, <x2_norm>, <y2_norm>]
     }}
   ],
   "openings": [
     {{
-      "type": "<door|window>",
+      "type": "<door|window|opening>",
       "wall": "<north|south|east|west>",
       "position_along_wall": <float, 0.0-1.0>,
       "width": <float>,
       "height": <float>,
-      "bottom_height": <float>
+      "bottom_height": <float, 0 for doors>
     }}
   ],
   "lighting": {{
     "type": "<ceiling_lamp|fluorescent|natural|none>",
     "intensity": <0.0-5.0>,
-    "color": "<hex color>"
+    "color": "<hex color — #FFF5E0 warm, #F0F5FF cool/fluorescent>"
   }},
   "surface_crops": [
     {{
-      "type": "<floor|wall|wall_north|wall_south|wall_east|wall_west|ceiling>",
+      "type": "<floor|wall_north|wall_south|wall_east|wall_west|ceiling>",
       "bbox": [<x1_norm>, <y1_norm>, <x2_norm>, <y2_norm>]
     }}
   ]
-}}
+}}"""
 
-Focus on material identification and furniture placement accuracy using the known dimensions."""
+
+ANALYZE_WITH_GEOMETRY_PROMPT = """You are a 3D scene reconstruction expert. The room dimensions are already known from 3D reconstruction.
+
+Room: {{width}}m wide x {{depth}}m deep x {{height}}m tall.
+
+Analyze the photo and extract materials, furniture, and lighting. Use the known dimensions for positioning.
+
+CRITICAL: Floor-standing items MUST have z=0.
+
+Available types: washing_machine, sink, shelf, cabinet, bookshelf, pipe, radiator, sofa, couch, armchair, chair, bed, table, desk, tv, tv_stand, lamp, floor_lamp, plant, mirror, rug, carpet, curtain, vase, wall_art, painting, basket, decor.
+
+For pipes: width>height = horizontal, height>width = vertical.
+Use "decor" for unrecognized objects (boxes, bags, tools, bottles).
+
+Return ONLY valid JSON with same structure as standard analysis."""
 
 
 def analyze_photo(image_path: str) -> dict:

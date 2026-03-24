@@ -105,7 +105,7 @@ Return ONLY valid JSON with this structure:
   "floor": {{"color": "<hex>", "material": "<wood|tile|concrete|vinyl>", "texture_roughness": <0-1>}},
   "ceiling": {{"color": "<hex>", "height": <float>}},
   "furniture": [
-    {{"id": "<unique>", "type": "<sofa|bed|table|chair|armchair|shelf|bookshelf|cabinet|desk|tv|lamp|plant|mirror|rug|wall_art|painting|curtain|vase|wardrobe|dresser|nightstand|decor|ottoman>",
+    {{"id": "<unique>", "type": "<sofa|bed|table|chair|armchair|shelf|bookshelf|cabinet|desk|tv|lamp|floor_lamp|plant|mirror|rug|wall_art|painting|curtain|vase|wardrobe|dresser|nightstand|decor|ottoman|washing_machine|sink|pipe|radiator|basket>",
       "label": "<detailed description for AI rendering>",
       "position": {{"x": <float>, "y": <float>, "z": <float>}},
       "size": {{"width": <float>, "depth": <float>, "height": <float>}},
@@ -118,7 +118,7 @@ Return ONLY valid JSON with this structure:
 
 Rules:
 - Use realistic dimensions in meters
-- Place furniture naturally, spread throughout the room (x=left-right, y=front-back, z=up, center is 0,0)
+- Place furniture naturally, spread throughout the room (x=left-right, y=front-back, z=up, center is 0,0). Floor items MUST have z=0
 - Include detailed labels that describe the exact appearance for AI image generation
 - Add architectural features if mentioned (mezzanine, fireplace, stairs)
 - For architectural: {{"mezzanine": {{"height": <m>, "depth": <m>, "wall": "north", "railing": "glass_metal"}}, "stairs": {{"position": "northwest", "treads": "walnut"}}, "fireplace": {{"wall": "north", "type": "built_in", "surround": "concrete"}}}}"""

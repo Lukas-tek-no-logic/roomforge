@@ -1024,6 +1024,31 @@ def _make_vase(name, x, y, z0, fw, fd, fh, color_hex, roughness, mat_type, tex_c
     obj.data.materials.append(mat)
 
 
+def _make_radiator(name, x, y, z0, fw, fd, fh, color_hex, roughness, mat_type, tex_cache):
+    """Radiator/heater: flat panel with horizontal fins."""
+    import bpy
+    mat = make_material(f"mat_{name}", color_hex, max(roughness, 0.3), "metal", tex_cache)
+
+    # Main body (thin panel)
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(x, y, z0 + fh / 2))
+    body = bpy.context.active_object
+    body.name = name
+    body.scale = (fw, max(fd, 0.05), fh)
+    body.data.materials.append(mat)
+
+    # Horizontal fins (4-8 depending on height)
+    n_fins = max(3, min(8, int(fh / 0.1)))
+    fin_gap = fh / (n_fins + 1)
+    fin_mat = make_material(f"mat_{name}_fin", color_hex, 0.35, "metal", tex_cache)
+    for i in range(n_fins):
+        fz = z0 + fin_gap * (i + 1)
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(x, y - fd / 2 - 0.005, fz))
+        fin = bpy.context.active_object
+        fin.name = f"{name}_fin_{i}"
+        fin.scale = (fw * 0.95, 0.003, 0.015)
+        fin.data.materials.append(fin_mat)
+
+
 def _make_decor(name, x, y, z0, fw, fd, fh, color_hex, roughness, mat_type, tex_cache):
     """Smart decor: picks shape based on proportions and material."""
     import bpy
@@ -1126,7 +1151,9 @@ def place_furniture(item, tex_cache, furniture_glb_dir="", room_w=None, room_d=N
     # Shape builders by type
     shape_builders = {
         "washing_machine": _make_washer,
-        "dryer":           _make_decor,  # dryer/radiator — use smart shape heuristic
+        "dryer":           _make_radiator,
+        "radiator":        _make_radiator,
+        "heater":          _make_radiator,
         "shelf":           _make_shelf,
         "pipe":            _make_pipe,
         "sofa":            _make_sofa,
@@ -1245,6 +1272,8 @@ MAT_TYPE_MAP = {
 FURNITURE_DEFAULTS = {
     "washing_machine": ("#EFEFEF", "metal",   0.25),
     "dryer":           ("#E8E8E8", "metal",   0.25),
+    "radiator":        ("#D0D0D0", "metal",   0.35),
+    "heater":          ("#D0D0D0", "metal",   0.35),
     "shelf":           ("#C4A265", "wood",    0.55),
     "cabinet":         ("#D2B48C", "wood",    0.50),
     "sink":            ("#F0F4F8", "ceramic", 0.05),
