@@ -183,6 +183,7 @@ def make_material(name: str, color_hex: str, roughness: float = 0.5, mat_type: s
     """Create material with hierarchy: CHORD maps > Polyhaven textures > procedural."""
     import bpy
     mat = bpy.data.materials.new(name=name)
+    mat.use_backface_culling = False  # visible from both sides
     if hasattr(mat, "use_nodes"):
         mat.use_nodes = True
 
@@ -614,6 +615,11 @@ def add_plane(name, location, scale, rotation=(0, 0, 0), color_hex="#CCCCCC",
     mat = make_material(f"mat_{name}", color_hex, roughness, mat_type, texture_cache_dir,
                         chord_dir=chord_dir, surface_name=surface_name)
     obj.data.materials.append(mat)
+    # Solidify: makes planes visible from both sides in Cycles
+    if "wall" in name or "ceiling" in name:
+        mod = obj.modifiers.new("Solidify", 'SOLIDIFY')
+        mod.thickness = 0.01
+        mod.offset = 0
     return obj
 
 
@@ -636,7 +642,8 @@ def add_box(name, location, scale, color_hex="#888888", roughness=0.5, mat_type=
 def _make_washer(name, x, y, z0, fw, fd, fh, color_hex, roughness, mat_type, tex_cache):
     """Washing machine: box body + circular porthole."""
     import bpy
-    mat = make_material(f"mat_{name}", color_hex, roughness, mat_type, tex_cache)
+    # Force procedural metal (not Polyhaven metal_plate texture)
+    mat = make_material(f"mat_{name}", color_hex, 0.25, "paint", tex_cache)
 
     # Body
     bpy.ops.mesh.primitive_cube_add(size=1, location=(x, y, z0 + fh / 2))
@@ -683,15 +690,25 @@ def _make_shelf(name, x, y, z0, fw, fd, fh, color_hex, roughness, mat_type, tex_
 
 
 def _make_pipe(name, x, y, z0, fw, fd, fh, color_hex, roughness, mat_type, tex_cache):
-    """Pipe as a cylinder."""
+    """Pipe as a cylinder — auto-detects orientation from dimensions."""
     import bpy
     mat = make_material(f"mat_{name}", color_hex, roughness, mat_type, tex_cache)
-    r = min(fw, fd) / 2
-    bpy.ops.mesh.primitive_cylinder_add(
-        radius=r, depth=fh,
-        location=(x, y, z0 + fh / 2)
-    )
-    obj = bpy.context.active_object
+
+    if fw >= max(fh, fd):  # horizontal along X
+        r = max(min(fd, fh) / 2, 0.02)
+        bpy.ops.mesh.primitive_cylinder_add(radius=r, depth=fw, location=(x, y, z0 + fh / 2))
+        obj = bpy.context.active_object
+        obj.rotation_euler = (0, math.pi / 2, 0)
+    elif fd >= max(fh, fw):  # horizontal along Y
+        r = max(min(fw, fh) / 2, 0.02)
+        bpy.ops.mesh.primitive_cylinder_add(radius=r, depth=fd, location=(x, y, z0 + fh / 2))
+        obj = bpy.context.active_object
+        obj.rotation_euler = (math.pi / 2, 0, 0)
+    else:  # vertical (default)
+        r = max(min(fw, fd) / 2, 0.02)
+        bpy.ops.mesh.primitive_cylinder_add(radius=r, depth=fh, location=(x, y, z0 + fh / 2))
+        obj = bpy.context.active_object
+
     obj.name = name
     obj.data.materials.append(mat)
 
@@ -1007,6 +1024,58 @@ def _make_vase(name, x, y, z0, fw, fd, fh, color_hex, roughness, mat_type, tex_c
     obj.data.materials.append(mat)
 
 
+def _make_decor(name, x, y, z0, fw, fd, fh, color_hex, roughness, mat_type, tex_cache):
+    """Smart decor: picks shape based on proportions and material."""
+    import bpy
+    mat = make_material(f"mat_{name}", color_hex, roughness, mat_type, tex_cache)
+
+    # Very flat → rug/mat
+    if fh <= 0.04:
+        bpy.ops.mesh.primitive_plane_add(size=1, location=(x, y, z0 + fh / 2))
+        obj = bpy.context.active_object
+        obj.scale = (fw, fd, 1)
+        obj.name = name
+        obj.data.materials.append(mat)
+        return
+
+    # Thin panel (radiator, screen, leaning object)
+    if fd <= 0.08 or fw <= 0.08:
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(x, y, z0 + fh / 2))
+        obj = bpy.context.active_object
+        obj.scale = (fw, max(fd, 0.03), fh)
+        obj.name = name
+        obj.data.materials.append(mat)
+        return
+
+    # Tall and thin → pole/stick
+    if fh > 2.5 * max(fw, fd):
+        r = min(fw, fd) / 2
+        bpy.ops.mesh.primitive_cylinder_add(radius=r, depth=fh, location=(x, y, z0 + fh / 2))
+        obj = bpy.context.active_object
+        obj.name = name
+        obj.data.materials.append(mat)
+        return
+
+    # Fabric → soft rounded shape (cylinder)
+    if mat_type == "fabric":
+        r = max(fw, fd) / 2
+        bpy.ops.mesh.primitive_cylinder_add(radius=r, depth=fh, location=(x, y, z0 + fh / 2))
+        obj = bpy.context.active_object
+        obj.name = name
+        obj.data.materials.append(mat)
+        return
+
+    # Default: beveled box (rounded edges)
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(x, y, z0 + fh / 2))
+    obj = bpy.context.active_object
+    obj.scale = (fw, fd, fh)
+    obj.name = name
+    obj.data.materials.append(mat)
+    bevel = obj.modifiers.new("Bevel", 'BEVEL')
+    bevel.width = min(fw, fd, fh) * 0.08
+    bevel.segments = 2
+
+
 def place_furniture(item, tex_cache, furniture_glb_dir="", room_w=None, room_d=None):
     """Dispatch furniture creation: GLB import (Phase 4) > shape builder > box fallback."""
     item_type = item.get("type", "")
@@ -1071,14 +1140,14 @@ def place_furniture(item, tex_cache, furniture_glb_dir="", room_w=None, room_d=N
         "curtain":         _make_curtain,
         "drapes":          _make_curtain,
         "vase":            _make_vase,
+        "decor":           _make_decor,
+        "basket":          _make_decor,
     }
     builder = shape_builders.get(item_type)
     if builder:
         builder(name, x, y, z0, fw, fd, fh, raw_color, roughness, mat_type, tex_cache)
     else:
-        add_box(name, location=(x, y, z0 + fh / 2), scale=(fw, fd, fh),
-                color_hex=raw_color, roughness=roughness, mat_type=mat_type,
-                texture_cache_dir=tex_cache)
+        _make_decor(name, x, y, z0, fw, fd, fh, raw_color, roughness, mat_type, tex_cache)
 
 
 def _import_glb(name: str, glb_path: str, x: float, y: float, z0: float,
@@ -1207,47 +1276,70 @@ FURNITURE_DEFAULTS = {
 }
 
 
-CAMERA_PRESETS = [
-    # (name, loc_fn, target_fn, lens_fn)  — functions of (W, D, H)
-    ("front",
-     lambda W, D, H: (-W * 0.15, -(D / 2 - max(0.3, 0.15)), min(H * 0.50, 1.55)),
-     lambda W, D, H: (0.0, D * 0.10, H * 0.35),
-     lambda W, D, H: max(16, min(24, 20 - (max(W, D) - 4) * 1.5))),
-    ("corner_left",
-     lambda W, D, H: (-(W / 2 - 0.3), -(D / 2 - 0.3), min(H * 0.50, 1.55)),
-     lambda W, D, H: (W * 0.15, D * 0.15, H * 0.35),
-     lambda W, D, H: max(18, min(26, 22 - (max(W, D) - 4) * 1.5))),
-    ("corner_right",
-     lambda W, D, H: ((W / 2 - 0.3), -(D / 2 - 0.3), min(H * 0.50, 1.55)),
-     lambda W, D, H: (-W * 0.15, D * 0.15, H * 0.35),
-     lambda W, D, H: max(18, min(26, 22 - (max(W, D) - 4) * 1.5))),
-    ("side",
-     lambda W, D, H: (-(W / 2 - 0.2), 0.0, min(H * 0.50, 1.55)),
-     lambda W, D, H: (W * 0.2, D * 0.1, H * 0.35),
-     lambda W, D, H: max(18, min(28, 24 - (max(W, D) - 4) * 1.5))),
+CAMERA_CORNERS = [
+    # Camera on south side — always sees north wall front face
+    # (corner_x_sign, corner_y_sign)
+    (-1, -1),  # SW corner → looks NE
+    ( 1, -1),  # SE corner → looks NW
+    ( 0, -1),  # S center  → looks N (front view)
+    (-1,  0),  # W center  → looks E (side view)
 ]
 
 
-def _setup_camera(bpy, W: float, D: float, H: float, camera_id: int = 0):
-    """Set up camera from preset. camera_id selects which angle (0=front, 1=corner_left, etc.)."""
+def _setup_camera(bpy, W: float, D: float, H: float, camera_id: int = 0,
+                   furniture_data: list | None = None):
+    """Smart camera: picks best corner to see most furniture, or uses camera_id preset."""
     import mathutils
-    preset = CAMERA_PRESETS[camera_id % len(CAMERA_PRESETS)]
-    name, loc_fn, target_fn, lens_fn = preset
 
-    cam_loc = mathutils.Vector(loc_fn(W, D, H))
-    # Clamp camera to stay at least 0.3m from any wall
-    wall_buf = 0.3
-    cam_loc.x = max(-W / 2 + wall_buf, min(W / 2 - wall_buf, cam_loc.x))
-    cam_loc.y = max(-D / 2 + wall_buf, min(D / 2 - wall_buf, cam_loc.y))
-    cam_loc.z = max(0.3, min(H - 0.1, cam_loc.z))
-    target = mathutils.Vector(target_fn(W, D, H))
+    buf = 0.3  # distance from wall
+    eye_h = min(H * 0.50, 1.55)
+    lens = max(16, min(26, 22 - (max(W, D) - 4) * 1.5))
+
+    # Calculate furniture centroid (if available)
+    cx, cy, cz = 0.0, 0.0, H * 0.35
+    if furniture_data:
+        positions = []
+        for item in furniture_data:
+            pos = item.get("position", {})
+            sz = item.get("size", {})
+            px = float(pos.get("x", 0))
+            py = float(pos.get("y", 0))
+            pz = float(pos.get("z", 0)) + float(sz.get("height", 0.5)) * 0.5
+            positions.append((px, py, pz))
+        if positions:
+            cx = sum(p[0] for p in positions) / len(positions)
+            cy = sum(p[1] for p in positions) / len(positions)
+            cz = sum(p[2] for p in positions) / len(positions)
+            cz = min(cz, H * 0.6)  # don't aim too high
+
+    if camera_id == 0 and furniture_data:
+        # Auto-select: pick corner farthest from furniture centroid
+        best_corner = 0
+        best_dist = -1
+        for i, (sx, sy) in enumerate(CAMERA_CORNERS):
+            corner_x = sx * (W / 2 - buf)
+            corner_y = sy * (D / 2 - buf)
+            dist = math.sqrt((corner_x - cx) ** 2 + (corner_y - cy) ** 2)
+            if dist > best_dist:
+                best_dist = dist
+                best_corner = i
+        sx, sy = CAMERA_CORNERS[best_corner]
+    else:
+        sx, sy = CAMERA_CORNERS[camera_id % len(CAMERA_CORNERS)]
+
+    cam_loc = mathutils.Vector((
+        sx * (W / 2 - buf),
+        sy * (D / 2 - buf),
+        eye_h
+    ))
+    target = mathutils.Vector((cx, cy, cz))
     direction = target - cam_loc
     rot_quat = direction.to_track_quat("-Z", "Y")
 
     bpy.ops.object.camera_add(location=cam_loc)
     cam = bpy.context.active_object
     cam.rotation_euler = rot_quat.to_euler()
-    cam.data.lens = lens_fn(W, D, H)
+    cam.data.lens = lens
     cam.data.sensor_width = 36
     cam.data.clip_start = 0.1
     cam.data.clip_end = max(50, W + D + H)
@@ -1384,6 +1476,178 @@ def _build_architectural_features(arch: dict, W: float, D: float, H: float, tex_
         base.data.materials.append(base_mat)
 
 
+def _build_walls_with_openings(openings, W, D, H, wall_color, wall_rough, wall_mat,
+                                texture_cache, chord_dir):
+    """Build walls with cutouts for windows and doors."""
+    import bpy
+
+    # Wall definitions: name → (center, wall_length, rotation, normal_axis)
+    wall_specs = {
+        "north": {"pos_y":  D/2, "length": W, "rot": (math.pi/2, 0, 0),         "axis": "x"},
+        "south": {"pos_y": -D/2, "length": W, "rot": (-math.pi/2, 0, 0),        "axis": "x"},
+        "east":  {"pos_x":  W/2, "length": D, "rot": (math.pi/2, 0, math.pi/2), "axis": "y"},
+        "west":  {"pos_x": -W/2, "length": D, "rot": (math.pi/2, 0, -math.pi/2),"axis": "y"},
+    }
+
+    # Group openings by wall
+    wall_openings: dict[str, list] = {k: [] for k in wall_specs}
+    for op in openings:
+        wname = op.get("wall", "").lower()
+        if wname in wall_openings:
+            wall_openings[wname].append(op)
+
+    glass_mat = None  # lazy create
+
+    for wname, spec in wall_specs.items():
+        ops = sorted(wall_openings[wname], key=lambda o: o.get("position_along_wall", 0.5))
+        L = spec["length"]
+        rot = spec["rot"]
+
+        # Wall position in 3D (use default args to capture loop values)
+        if "pos_y" in spec:
+            wall_y = spec["pos_y"]
+            def _loc(u_center, v_center, sx, sy, _L=L, _wy=wall_y):
+                return ((-_L/2 + u_center), _wy, v_center), (sx, sy, 1)
+        else:
+            wall_x = spec["pos_x"]
+            def _loc(u_center, v_center, sx, sy, _L=L, _wx=wall_x):
+                return (_wx, (-_L/2 + u_center), v_center), (sx, sy, 1)
+
+        if not ops:
+            # No openings — full wall
+            center_u = L / 2
+            center_v = H / 2
+            loc, sc = _loc(center_u, center_v, L, H)
+            add_plane(f"wall_{wname}", loc, sc, rotation=rot,
+                      color_hex=wall_color, roughness=wall_rough, mat_type=wall_mat,
+                      texture_cache_dir=texture_cache,
+                      chord_dir=chord_dir, surface_name="wall")
+            continue
+
+        # Build wall segments around openings
+        seg_idx = 0
+        prev_right = 0.0  # in wall-local U coords (0..L)
+
+        for op in ops:
+            pos = float(op.get("position_along_wall", 0.5))
+            ow = float(op.get("width", 0.8))
+            oh = float(op.get("height", 1.2))
+            ob = float(op.get("bottom_height", 0.9))
+            otype = op.get("type", "window")
+
+            u_left = max(0, pos * L - ow / 2)
+            u_right = min(L, pos * L + ow / 2)
+            v_bottom = ob
+            v_top = min(H, ob + oh)
+
+            # Left full-height segment (from prev_right to u_left)
+            if u_left - prev_right > 0.01:
+                seg_w = u_left - prev_right
+                cu = prev_right + seg_w / 2
+                loc, sc = _loc(cu, H / 2, seg_w, H)
+                add_plane(f"wall_{wname}_s{seg_idx}", loc, sc, rotation=rot,
+                          color_hex=wall_color, roughness=wall_rough, mat_type=wall_mat,
+                          texture_cache_dir=texture_cache, chord_dir=chord_dir, surface_name="wall")
+                seg_idx += 1
+
+            # Below opening
+            if v_bottom > 0.01:
+                seg_h = v_bottom
+                cu = (u_left + u_right) / 2
+                loc, sc = _loc(cu, seg_h / 2, ow, seg_h)
+                add_plane(f"wall_{wname}_s{seg_idx}", loc, sc, rotation=rot,
+                          color_hex=wall_color, roughness=wall_rough, mat_type=wall_mat,
+                          texture_cache_dir=texture_cache, chord_dir=chord_dir, surface_name="wall")
+                seg_idx += 1
+
+            # Above opening
+            if v_top < H - 0.01:
+                seg_h = H - v_top
+                cu = (u_left + u_right) / 2
+                loc, sc = _loc(cu, v_top + seg_h / 2, ow, seg_h)
+                add_plane(f"wall_{wname}_s{seg_idx}", loc, sc, rotation=rot,
+                          color_hex=wall_color, roughness=wall_rough, mat_type=wall_mat,
+                          texture_cache_dir=texture_cache, chord_dir=chord_dir, surface_name="wall")
+                seg_idx += 1
+
+            # Window glass pane or door panel
+            cu = (u_left + u_right) / 2
+            cv = v_bottom + oh / 2
+            glass_loc, _ = _loc(cu, cv, 0, 0)
+
+            if otype == "window":
+                if glass_mat is None:
+                    glass_mat = bpy.data.materials.new(name="mat_window_glass")
+                    glass_mat.use_backface_culling = False
+                    glass_mat.use_nodes = True
+                    bsdf = glass_mat.node_tree.nodes.get("Principled BSDF")
+                    if bsdf:
+                        _set(bsdf, "Base Color", (0.85, 0.92, 1.0, 1.0))
+                        _set(bsdf, "Roughness", 0.0)
+                        _set(bsdf, "Transmission Weight", 0.95)
+                        _set(bsdf, "IOR", 1.5)
+
+                # Glass pane
+                bpy.ops.mesh.primitive_cube_add(size=1, location=glass_loc)
+                glass = bpy.context.active_object
+                glass.name = f"window_{wname}_{seg_idx}"
+                glass.scale = (ow - 0.06, 0.01, oh - 0.06)
+                glass.rotation_euler = rot
+                glass.data.materials.append(glass_mat)
+
+                # Window frame (simple border)
+                frame_mat = make_material(f"mat_frame_{wname}", "#8B7355", 0.4, "wood",
+                                          texture_cache)
+                # Top frame
+                top_loc, _ = _loc(cu, v_top, 0, 0)
+                bpy.ops.mesh.primitive_cube_add(size=1, location=top_loc)
+                fr = bpy.context.active_object
+                fr.name = f"frame_{wname}_top"
+                fr.scale = (ow + 0.04, 0.05, 0.03)
+                fr.rotation_euler = rot
+                fr.data.materials.append(frame_mat)
+
+                # Bottom frame / sill
+                bot_loc, _ = _loc(cu, v_bottom, 0, 0)
+                bpy.ops.mesh.primitive_cube_add(size=1, location=bot_loc)
+                sill = bpy.context.active_object
+                sill.name = f"sill_{wname}"
+                sill.scale = (ow + 0.06, 0.08, 0.03)
+                sill.rotation_euler = rot
+                sill.data.materials.append(frame_mat)
+
+                # Side frames
+                for side, u_pos in [("left", u_left), ("right", u_right)]:
+                    side_loc, _ = _loc(u_pos, cv, 0, 0)
+                    bpy.ops.mesh.primitive_cube_add(size=1, location=side_loc)
+                    sf = bpy.context.active_object
+                    sf.name = f"frame_{wname}_{side}"
+                    sf.scale = (0.03, 0.05, oh + 0.04)
+                    sf.rotation_euler = rot
+                    sf.data.materials.append(frame_mat)
+
+            elif otype == "door":
+                door_mat = make_material(f"mat_door_{wname}", "#D2B48C", 0.5, "wood",
+                                         texture_cache)
+                bpy.ops.mesh.primitive_cube_add(size=1, location=glass_loc)
+                door = bpy.context.active_object
+                door.name = f"door_{wname}"
+                door.scale = (ow - 0.04, 0.04, oh - 0.02)
+                door.rotation_euler = rot
+                door.data.materials.append(door_mat)
+
+            prev_right = u_right
+
+        # Right remaining full-height segment
+        if L - prev_right > 0.01:
+            seg_w = L - prev_right
+            cu = prev_right + seg_w / 2
+            loc, sc = _loc(cu, H / 2, seg_w, H)
+            add_plane(f"wall_{wname}_s{seg_idx}", loc, sc, rotation=rot,
+                      color_hex=wall_color, roughness=wall_rough, mat_type=wall_mat,
+                      texture_cache_dir=texture_cache, chord_dir=chord_dir, surface_name="wall")
+
+
 def build_scene(data: dict, session_dir: str = ""):
     import bpy
 
@@ -1431,26 +1695,28 @@ def build_scene(data: dict, session_dir: str = ""):
               texture_cache_dir=texture_cache,
               chord_dir=chord_materials_dir, surface_name="ceiling")
 
-    add_plane("wall_north", (0,  D/2, H/2), (W, H, 1),
-              rotation=(math.pi/2, 0, 0),
-              color_hex=wall_color, roughness=wall_rough, mat_type=wall_mat,
-              texture_cache_dir=texture_cache,
-              chord_dir=chord_materials_dir, surface_name="wall")
-    add_plane("wall_south", (0, -D/2, H/2), (W, H, 1),
-              rotation=(-math.pi/2, 0, 0),
-              color_hex=wall_color, roughness=wall_rough, mat_type=wall_mat,
-              texture_cache_dir=texture_cache,
-              chord_dir=chord_materials_dir, surface_name="wall")
-    add_plane("wall_east",  ( W/2, 0, H/2), (D, H, 1),
-              rotation=(math.pi/2, 0, math.pi/2),
-              color_hex=wall_color, roughness=wall_rough, mat_type=wall_mat,
-              texture_cache_dir=texture_cache,
-              chord_dir=chord_materials_dir, surface_name="wall")
-    add_plane("wall_west",  (-W/2, 0, H/2), (D, H, 1),
-              rotation=(math.pi/2, 0, -math.pi/2),
-              color_hex=wall_color, roughness=wall_rough, mat_type=wall_mat,
-              texture_cache_dir=texture_cache,
-              chord_dir=chord_materials_dir, surface_name="wall")
+    _build_walls_with_openings(
+        data.get("openings", []), W, D, H,
+        wall_color, wall_rough, wall_mat,
+        texture_cache, chord_materials_dir
+    )
+
+    # ── Baseboards (skirting) ──
+    import bpy as _bpy
+    baseboard_h = 0.06
+    baseboard_d = 0.012
+    bb_mat = make_material("mat_baseboard", "#F5F0E8", 0.4, "paint", texture_cache)
+    for bb_name, bb_loc, bb_scale in [
+        ("bb_north", (0,  D/2 - baseboard_d/2, baseboard_h/2), (W, baseboard_d, baseboard_h)),
+        ("bb_south", (0, -D/2 + baseboard_d/2, baseboard_h/2), (W, baseboard_d, baseboard_h)),
+        ("bb_east",  ( W/2 - baseboard_d/2, 0, baseboard_h/2), (baseboard_d, D, baseboard_h)),
+        ("bb_west",  (-W/2 + baseboard_d/2, 0, baseboard_h/2), (baseboard_d, D, baseboard_h)),
+    ]:
+        _bpy.ops.mesh.primitive_cube_add(size=1, location=bb_loc)
+        bb = _bpy.context.active_object
+        bb.name = bb_name
+        bb.scale = bb_scale
+        bb.data.materials.append(bb_mat)
 
     # ── Furniture (Phase 4: GLB import has priority over primitives) ──
     for item in data.get("furniture", []):
@@ -1464,12 +1730,27 @@ def build_scene(data: dict, session_dir: str = ""):
 
     # ── Camera ──
     camera_id = data.get("_camera_id", 0)
-    _setup_camera(bpy, W, D, H, camera_id)
+    _setup_camera(bpy, W, D, H, camera_id, furniture_data=data.get("furniture", []))
 
     # ── Lighting ──
     lighting = data.get("lighting", {})
     intensity = float(lighting.get("intensity", 2.0))
     lc = hex_to_linear(lighting.get("color", "#FFF8F0"))[:3]  # warm white
+
+    # Ceiling light fixture (visible geometry)
+    bpy.ops.mesh.primitive_cylinder_add(radius=0.15, depth=0.03, location=(0, 0, H - 0.02))
+    fixture = bpy.context.active_object
+    fixture.name = "ceiling_light_fixture"
+    fixture_mat = bpy.data.materials.new("mat_light_fixture")
+    fixture_mat.use_nodes = True
+    fn = fixture_mat.node_tree.nodes
+    fn.clear()
+    emit = fn.new("ShaderNodeEmission")
+    emit.inputs["Color"].default_value = (*lc, 1.0)
+    emit.inputs["Strength"].default_value = intensity * 5
+    out = fn.new("ShaderNodeOutputMaterial")
+    fixture_mat.node_tree.links.new(emit.outputs[0], out.inputs[0])
+    fixture.data.materials.append(fixture_mat)
 
     # Main ceiling area light
     bpy.ops.object.light_add(type="AREA", location=(0, 0, H - 0.08))
