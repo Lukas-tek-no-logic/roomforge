@@ -63,28 +63,34 @@ def scale_depth_to_metric(depth_map: np.ndarray, room_depth: float) -> np.ndarra
     far_region = depth_map[int(h * 0.15):int(h * 0.30), int(w * 0.4):int(w * 0.6)]
     far_val = float(np.median(far_region)) if far_region.size > 0 else float(depth_map.min())
 
-    # Depth Anything V2 outputs inverse depth: larger = closer
-    # So near_val > far_val (near objects have higher inverse depth)
-    depth_range = abs(near_val - far_val)
-    if depth_range < 1e-6:
-        # Flat depth map — can't scale, return uniform
+    # Depth Anything V2 outputs INVERSE depth: larger = closer
+    # Inverse depth d_inv = k / z_real, so z_real = k / d_inv
+    # We need to find k (scale factor) using the known room depth.
+
+    # Avoid division by zero
+    depth_safe = np.clip(depth_map, 1e-3, None)
+
+    # Convert inverse depth to proportional real distance
+    # z_proportional = 1 / d_inv (larger inverse depth = smaller real distance)
+    z_prop = 1.0 / depth_safe
+
+    h, w = depth_map.shape
+
+    # Find the min and max proportional distances (across whole image)
+    z_min = float(np.percentile(z_prop, 2))   # nearest surface (ignore outliers)
+    z_max = float(np.percentile(z_prop, 98))  # farthest surface
+
+    z_range = z_max - z_min
+    if abs(z_range) < 1e-8:
         return np.full_like(depth_map, room_depth / 2)
 
-    # Convert inverse depth to forward depth (distance from camera)
-    # near_val → distance ~0.5m (camera to first floor visible)
-    # far_val → distance ~room_depth
-    camera_offset = 0.3  # camera is ~0.3m inside from south wall
+    # Normalize to 0..1 (0 = nearest, 1 = farthest)
+    z_norm = (z_prop - z_min) / z_range
+    z_norm = np.clip(z_norm, 0, 1)
 
-    if near_val > far_val:
-        # Inverse depth: higher value = closer
-        # Normalize: 0 = farthest, 1 = nearest
-        depth_norm = (depth_map - far_val) / depth_range
-        # Convert to metric forward distance
-        metric = camera_offset + (1.0 - depth_norm) * room_depth
-    else:
-        # Direct depth: higher value = farther
-        depth_norm = (depth_map - near_val) / depth_range
-        metric = camera_offset + depth_norm * room_depth
+    # Scale to metric: nearest ≈ 0.3m, farthest ≈ room_depth
+    camera_offset = 0.3
+    metric = camera_offset + z_norm * (room_depth - camera_offset)
 
     return metric
 
@@ -114,6 +120,12 @@ def compute_3d_positions(
     half_w, half_d = W / 2, D / 2
 
     for item in furniture:
+        # Skip wall-attached items — Claude's wall assignment is more accurate
+        # than depth for objects touching walls (depth measures front face, not wall)
+        wall = item.get("wall", "")
+        if wall in ("north", "south", "east", "west"):
+            continue
+
         bbox = item.get("bbox")
         if not bbox or len(bbox) < 4:
             continue
@@ -164,40 +176,12 @@ def compute_3d_positions(
         room_x = max(-half_w + fw / 2, min(half_w - fw / 2, room_x))
         room_y = max(-half_d + fd / 2, min(half_d - fd / 2, room_y))
 
-        # Check if near a wall → snap to wall-relative
-        wall_threshold = 0.2
-        snapped = False
-        if half_d - room_y - fd / 2 < wall_threshold:
-            # Near north wall
-            item["wall"] = "north"
-            item["position_along_wall"] = (room_x + half_w) / W
-            item["distance_from_wall"] = max(0, half_d - room_y - fd / 2)
-            snapped = True
-        elif room_y + half_d - fd / 2 < wall_threshold:
-            item["wall"] = "south"
-            item["position_along_wall"] = (room_x + half_w) / W
-            item["distance_from_wall"] = max(0, room_y + half_d - fd / 2)
-            snapped = True
-        elif half_w - room_x - fw / 2 < wall_threshold:
-            item["wall"] = "east"
-            item["position_along_wall"] = (room_y + half_d) / D
-            item["distance_from_wall"] = max(0, half_w - room_x - fw / 2)
-            snapped = True
-        elif room_x + half_w - fw / 2 < wall_threshold:
-            item["wall"] = "west"
-            item["position_along_wall"] = (room_y + half_d) / D
-            item["distance_from_wall"] = max(0, room_x + half_w - fw / 2)
-            snapped = True
-
-        if not snapped:
-            # Free-standing: inject position for legacy path
-            item["wall"] = "none"
-            item["position"] = {
-                "x": round(room_x, 3),
-                "y": round(room_y, 3),
-                "z": round(room_z, 3),
-            }
-
+        # Inject depth-computed position for free-standing items
+        item["position"] = {
+            "x": round(room_x, 3),
+            "y": round(room_y, 3),
+            "z": round(room_z, 3),
+        }
         item["elevation"] = round(room_z, 3)
 
     return furniture

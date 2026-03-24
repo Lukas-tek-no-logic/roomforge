@@ -1176,8 +1176,8 @@ def place_furniture(item, tex_cache, furniture_glb_dir="", room_w=None, room_d=N
 
             # Y: perspective — lower in image = closer to camera (south)
             # Nonlinear: t=0 (bottom) → y=-D/2, t=1 (top) → y=+D/2
-        t = 1.0 - bcy  # flip: 0=near camera, 1=far wall
-        y = -half_d + t * D
+            t = 1.0 - bcy  # flip: 0=near camera, 1=far wall
+            y = -half_d + t * D
 
         z0 = elevation
 
