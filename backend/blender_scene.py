@@ -1116,84 +1116,81 @@ def place_furniture(item, tex_cache, furniture_glb_dir="", room_w=None, room_d=N
     mat_type  = MAT_TYPE_MAP.get(raw_mat, defaults[1])
     roughness = defaults[2]
 
-    pos  = item.get("position", {})
     size = item.get("size",     {})
-    x  = float(pos.get("x", 0))
-    y  = float(pos.get("y", 0))
-    z0 = float(pos.get("z", 0))
     fw = float(size.get("width",  0.6))
     fd = float(size.get("depth",  0.6))
     fh = float(size.get("height", 0.85))
     name = item.get("id", item_type)
 
-    # Floor-standing items: force z=0 unless explicitly elevated
-    floor_types = {"washing_machine", "washer", "dryer", "radiator", "heater",
-                   "sofa", "couch", "armchair", "chair", "table", "bed",
-                   "cabinet", "bookshelf", "tv_stand", "sideboard", "console",
-                   "wardrobe", "dresser", "nightstand", "stool", "ottoman",
-                   "plant", "basket", "decor", "vase", "rug", "carpet"}
-    if item_type in floor_types and z0 > 0.1 and z0 < fh:
-        z0 = 0.0
+    # ── Position: wall-relative (new) or legacy x/y/z ──
+    W = room_w or 4.0
+    D = room_d or 3.0
+    H = room_h or 2.5
+    half_w, half_d = W / 2, D / 2
 
-    # Vertical pipes: start from floor (Claude often gives z=center of pipe)
-    if item_type == "pipe" and fh > max(fw, fd):  # vertical pipe
-        z0 = 0.0
-        # Clamp pipe height to room height
-        if room_h and z0 + fh > room_h:
-            fh = room_h
+    wall = item.get("wall", "")
+    pos_along = float(item.get("position_along_wall", 0.5))
+    dist_from_wall = float(item.get("distance_from_wall", 0.0))
+    elevation = float(item.get("elevation", 0.0))
+    gap = 0.03  # small gap between item and wall
 
-    # Horizontal pipes: clamp z so they don't poke through ceiling
-    if item_type == "pipe" and fw > max(fh, fd) and room_h:
-        z0 = min(z0, room_h - 0.05)
+    if wall in ("north", "south", "east", "west"):
+        # Wall-relative positioning — deterministic from geometry
+        if wall == "north":
+            x = -half_w + pos_along * W
+            y = half_d - fd / 2 - gap - dist_from_wall
+            z0 = elevation
+        elif wall == "south":
+            x = -half_w + pos_along * W
+            y = -half_d + fd / 2 + gap + dist_from_wall
+            z0 = elevation
+        elif wall == "east":
+            x = half_w - fd / 2 - gap - dist_from_wall
+            y = -half_d + pos_along * D
+            z0 = elevation
+        elif wall == "west":
+            x = -half_w + fd / 2 + gap + dist_from_wall
+            y = -half_d + pos_along * D
+            z0 = elevation
 
-    # Snap wall-hugging items to nearest wall
-    wall_types = {"washing_machine", "washer", "radiator", "heater", "dryer",
-                  "sink", "cabinet", "wardrobe", "dresser", "bookshelf", "tv_stand",
-                  "sideboard", "console"}
-    if room_w is not None and room_d is not None:
-        half_w = room_w / 2
-        half_d = room_d / 2
+        # Vertical pipes: always floor to ceiling
+        if item_type == "pipe" and fh > max(fw, fd):
+            z0 = 0.0
+            fh = min(fh, H)
 
-        if item_type in wall_types:
-            # Nudge toward nearest wall if within 0.5m (don't teleport across room)
-            dist_to_walls = [
-                ("north", half_d - y - fd/2),
-                ("south", y + half_d - fd/2),
-                ("east",  half_w - x - fw/2),
-                ("west",  x + half_w - fw/2),
-            ]
-            nearest_wall, nearest_dist = min(dist_to_walls, key=lambda w: w[1])
-            if nearest_dist < 0.6:  # only snap if already close to wall
-                gap = 0.03
-                if nearest_wall == "north":
-                    y = half_d - fd / 2 - gap
-                elif nearest_wall == "south":
-                    y = -half_d + fd / 2 + gap
-                elif nearest_wall == "east":
-                    x = half_w - fw / 2 - gap
-                elif nearest_wall == "west":
-                    x = -half_w + fw / 2 + gap
+    elif wall == "none":
+        # Free-standing: compute from bbox using perspective
+        bbox = item.get("bbox", [0.5, 0.5, 0.5, 0.5])
+        bcx = (bbox[0] + bbox[2]) / 2
+        bcy = (bbox[1] + bbox[3]) / 2
 
-        # Pipes: snap to nearest wall (they run along walls)
-        if item_type == "pipe":
-            dist_n = half_d - y
-            dist_s = y + half_d
-            dist_e = half_w - x
-            dist_w = x + half_w
-            min_dist = min(dist_n, dist_s, dist_e, dist_w)
-            wall_gap = 0.05
-            if min_dist == dist_n:
-                y = half_d - wall_gap
-            elif min_dist == dist_s:
-                y = -half_d + wall_gap
-            elif min_dist == dist_e:
-                x = half_w - wall_gap
-            elif min_dist == dist_w:
-                x = -half_w + wall_gap
+        # X: linear from image horizontal position
+        x = -half_w + bcx * W
 
-        # Clamp all items to stay within room bounds
-        x = max(-half_w + fw / 2 + 0.02, min(half_w - fw / 2 - 0.02, x))
-        y = max(-half_d + fd / 2 + 0.02, min(half_d - fd / 2 - 0.02, y))
+        # Y: perspective — lower in image = closer to camera (south)
+        # Nonlinear: t=0 (bottom) → y=-D/2, t=1 (top) → y=+D/2
+        t = 1.0 - bcy  # flip: 0=near camera, 1=far wall
+        y = -half_d + t * D
+
+        z0 = elevation
+
+    else:
+        # Legacy fallback: use position dict if present
+        pos = item.get("position", {})
+        x = float(pos.get("x", 0))
+        y = float(pos.get("y", 0))
+        z0 = float(pos.get("z", 0))
+        # Floor items: force z=0
+        if z0 > 0.1 and z0 < fh and item_type != "pipe":
+            z0 = 0.0
+
+    # Horizontal pipes: clamp z to ceiling
+    if item_type == "pipe" and fw > max(fh, fd):
+        z0 = min(z0, H - 0.05)
+
+    # Clamp to room bounds
+    x = max(-half_w + fw / 2 + 0.02, min(half_w - fw / 2 - 0.02, x))
+    y = max(-half_d + fd / 2 + 0.02, min(half_d - fd / 2 - 0.02, y))
 
     # Phase 4: Try importing real 3D model (GLB) from TRELLIS.2
     if furniture_glb_dir:
