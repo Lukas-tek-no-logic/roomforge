@@ -66,13 +66,25 @@ async def _extract_frames(video_path: str, frames_dir: str, max_frames: int = 15
 
 async def _reconstruct_on_dgx(frames_dir: str, output_dir: str) -> dict:
     """Send reconstruction request to DGX DN-Splatter service."""
+    import base64
+
+    # Encode frames as base64
+    frames_b64 = []
+    frame_paths = sorted(Path(frames_dir).glob("frame_*.jpg"))
+    for fp in frame_paths:
+        frames_b64.append(base64.b64encode(fp.read_bytes()).decode())
+
+    if not frames_b64:
+        raise RuntimeError(f"No frames found in {frames_dir}")
+
+    print(f"[reconstruct] Sending {len(frames_b64)} frames to DN-Splatter...")
+
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         resp = await client.post(
             f"{DGX_SPLATTER_URL}/reconstruct",
             json={
-                "frames_dir": frames_dir,
-                "output_dir": output_dir,
-                "max_frames": 150,
+                "frames_b64": frames_b64,
+                "output_name": "reconstruction",
             },
         )
         resp.raise_for_status()
@@ -80,6 +92,13 @@ async def _reconstruct_on_dgx(frames_dir: str, output_dir: str) -> dict:
 
     if "error" in data:
         raise RuntimeError(data["error"])
+
+    # Save mesh GLB if returned
+    mesh_b64 = data.get("mesh_b64", "")
+    if mesh_b64:
+        mesh_path = Path(output_dir) / "mesh.glb"
+        mesh_path.write_bytes(base64.b64decode(mesh_b64))
+        print(f"[reconstruct] Mesh saved: {mesh_path} ({data.get('mesh_size', 0) // 1024} KB)")
 
     room_data = data.get("room_data", {})
 
