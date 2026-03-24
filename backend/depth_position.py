@@ -120,10 +120,22 @@ def compute_3d_positions(
     half_w, half_d = W / 2, D / 2
 
     for item in furniture:
-        # Skip wall-attached items — Claude's wall assignment is more accurate
-        # than depth for objects touching walls (depth measures front face, not wall)
         wall = item.get("wall", "")
-        if wall in ("north", "south", "east", "west"):
+        bbox = item.get("bbox")
+
+        # For wall-attached items: refine position_along_wall from bbox
+        # Claude's wall assignment is correct, but position_along can be imprecise
+        if wall in ("north", "south", "east", "west") and bbox and len(bbox) >= 4:
+            bcx = (bbox[0] + bbox[2]) / 2  # 0..1 in image
+            # Camera faces north: image left=west (0.0), image right=east (1.0)
+            if wall in ("north", "south"):
+                item["position_along_wall"] = bcx  # bbox x → position along wall
+            elif wall == "east":
+                bcy = (bbox[1] + bbox[3]) / 2
+                item["position_along_wall"] = 1.0 - bcy  # higher in image = further north
+            elif wall == "west":
+                bcy = (bbox[1] + bbox[3]) / 2
+                item["position_along_wall"] = 1.0 - bcy
             continue
 
         bbox = item.get("bbox")

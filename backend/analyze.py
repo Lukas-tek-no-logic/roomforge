@@ -7,7 +7,7 @@ POSITIONING SYSTEM — two modes:
 1) WALL-ATTACHED items (furniture against walls, pipes, shelves, appliances):
    Use "wall" + "position_along_wall" — the code computes exact 3D coordinates.
    - "wall": which wall the item is against ("north"=back, "south"=front/camera, "east"=right, "west"=left)
-   - "position_along_wall": 0.0=left edge, 1.0=right edge (when FACING that wall from inside the room)
+   - "position_along_wall": 0.0-1.0 position along wall. For north/south walls: 0.0=west end, 1.0=east end. For east/west walls: 0.0=south end, 1.0=north end
    - "distance_from_wall": 0.0=touching wall (default), meters if offset
    - "elevation": 0.0=on floor, >0 for wall-mounted items or pipes
 
@@ -75,7 +75,7 @@ Return ONLY valid JSON:
 }}
 
 RULES:
-- For wall-attached: position_along_wall is left-to-right when FACING that wall from inside the room
+- CRITICAL: use the bbox x-coordinate to estimate position_along_wall. If an object's bbox center is at x=0.3 in the image, and it's on the north wall, position_along_wall ≈ 0.3 (since camera faces north, image left=west=0.0, image right=east=1.0)
 - Pipes running along a wall: wall=that wall, elevation=height of pipe center
 - Items on top of other items: elevation = height of item below
 - Small loose items on floor: wall="none", bbox is enough
