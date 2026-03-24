@@ -1159,16 +1159,23 @@ def place_furniture(item, tex_cache, furniture_glb_dir="", room_w=None, room_d=N
             fh = min(fh, H)
 
     elif wall == "none":
-        # Free-standing: compute from bbox using perspective
-        bbox = item.get("bbox", [0.5, 0.5, 0.5, 0.5])
-        bcx = (bbox[0] + bbox[2]) / 2
-        bcy = (bbox[1] + bbox[3]) / 2
+        # Prefer depth-computed position if available
+        pos = item.get("position")
+        if pos and "x" in pos:
+            x = float(pos["x"])
+            y = float(pos["y"])
+            z0 = float(pos.get("z", 0))
+        else:
+            # Fallback: compute from bbox using perspective
+            bbox = item.get("bbox", [0.5, 0.5, 0.5, 0.5])
+            bcx = (bbox[0] + bbox[2]) / 2
+            bcy = (bbox[1] + bbox[3]) / 2
 
-        # X: linear from image horizontal position
-        x = -half_w + bcx * W
+            # X: linear from image horizontal position
+            x = -half_w + bcx * W
 
-        # Y: perspective — lower in image = closer to camera (south)
-        # Nonlinear: t=0 (bottom) → y=-D/2, t=1 (top) → y=+D/2
+            # Y: perspective — lower in image = closer to camera (south)
+            # Nonlinear: t=0 (bottom) → y=-D/2, t=1 (top) → y=+D/2
         t = 1.0 - bcy  # flip: 0=near camera, 1=far wall
         y = -half_d + t * D
 

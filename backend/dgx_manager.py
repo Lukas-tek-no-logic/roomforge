@@ -19,6 +19,7 @@ SERVICES: dict[str, dict] = {
     "trellis":  {"path": "~/Projects/trellis",         "port": 8003},
     "splatter": {"path": "~/Projects/dn-splatter",     "port": 8004},
     "blender":  {"path": "~/Projects/blender-render",  "port": 8005},
+    "depth":    {"path": "~/Projects/depth-estimation","port": 8006},
 }
 
 

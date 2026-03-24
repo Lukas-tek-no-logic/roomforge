@@ -1,7 +1,10 @@
 import asyncio
 import base64
 import io
+import os
 from pathlib import Path
+
+import httpx
 
 import aiofiles
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -477,7 +480,30 @@ async def upload_photo(session_id: str, file: UploadFile = File(...)):
     await sess.update_state(session_id, {"status": "analyzing"})
 
     try:
-        room_data = analyze_photo(str(photo_path))
+        loop = asyncio.get_event_loop()
+        # Run Claude analysis and depth estimation in parallel
+        depth_task = asyncio.create_task(_get_depth_map(str(photo_path)))
+        room_data = await loop.run_in_executor(None, analyze_photo, str(photo_path))
+
+        # Merge depth data into positions
+        depth_map = await depth_task
+        if depth_map is not None:
+            try:
+                from .depth_position import estimate_fov, build_intrinsics, scale_depth_to_metric, compute_3d_positions
+                from PIL import Image as _PILImage
+                fov = estimate_fov(str(photo_path))
+                img = _PILImage.open(str(photo_path))
+                intrinsics = build_intrinsics(img.width, img.height, fov)
+                metric_depth = scale_depth_to_metric(depth_map, float(room_data["room"]["depth"]))
+                room_data["furniture"] = compute_3d_positions(
+                    room_data["furniture"], metric_depth, intrinsics, room_data["room"]
+                )
+                print(f"[depth] Positions refined for {len(room_data['furniture'])} items (fov={fov:.0f}°)")
+            except Exception as e:
+                print(f"[depth] Position refinement failed (non-fatal): {e}")
+        else:
+            print("[depth] No depth map — using Claude positions as-is")
+
     except Exception as e:
         await sess.update_state(session_id, {"status": "error", "error": f"Analysis failed: {e}"})
         raise HTTPException(500, f"Analysis failed: {e}")
@@ -494,6 +520,38 @@ async def upload_photo(session_id: str, file: UploadFile = File(...)):
         await sess.update_state(session_id, {"status": "no_blender"})
 
     return {"status": "ok", "room_data": room_data}
+
+
+async def _get_depth_map(photo_path: str):
+    """Call DGX depth estimation service, return numpy array or None."""
+    DGX_HOST = os.environ.get("DGX_HOST", "192.168.0.200")
+    DGX_DEPTH_URL = f"http://{DGX_HOST}:8006"
+    try:
+        import numpy as np
+        from PIL import Image as _PILImg
+        with open(photo_path, "rb") as f:
+            image_b64 = base64.b64encode(f.read()).decode()
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(f"{DGX_DEPTH_URL}/estimate", json={"image_b64": image_b64})
+            if resp.status_code != 200:
+                print(f"[depth] Service returned {resp.status_code}")
+                return None
+            data = resp.json()
+            if "error" in data:
+                print(f"[depth] Service error: {data['error']}")
+                return None
+            depth_bytes = base64.b64decode(data["depth_b64"])
+            depth_img = _PILImg.open(io.BytesIO(depth_bytes))
+            depth_array = np.array(depth_img, dtype=np.float32)
+            # Normalize uint16 back to model's value range
+            min_d = data.get("min_depth", 0)
+            max_d = data.get("max_depth", 1)
+            if max_d - min_d > 1e-6:
+                depth_array = min_d + (depth_array / 65535.0) * (max_d - min_d)
+            return depth_array
+    except Exception as e:
+        print(f"[depth] Service unavailable: {e}")
+        return None
 
 
 async def _extract_assets(session_id: str) -> None:
