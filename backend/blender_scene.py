@@ -1106,7 +1106,7 @@ def _make_decor(name, x, y, z0, fw, fd, fh, color_hex, roughness, mat_type, tex_
     bevel.segments = 2
 
 
-def place_furniture(item, tex_cache, furniture_glb_dir="", room_w=None, room_d=None):
+def place_furniture(item, tex_cache, furniture_glb_dir="", room_w=None, room_d=None, room_h=None):
     """Dispatch furniture creation: GLB import (Phase 4) > shape builder > box fallback."""
     item_type = item.get("type", "")
     defaults  = FURNITURE_DEFAULTS.get(item_type, ("#999999", "generic", 0.5))
@@ -1126,13 +1126,25 @@ def place_furniture(item, tex_cache, furniture_glb_dir="", room_w=None, room_d=N
     fh = float(size.get("height", 0.85))
     name = item.get("id", item_type)
 
-    # Floor-standing items: force z=0 unless explicitly elevated (shelves, pipes, wall items)
-    floor_types = {"washing_machine", "washer", "dryer", "sofa", "couch", "armchair",
-                   "chair", "table", "bed", "cabinet", "bookshelf", "tv_stand",
-                   "sideboard", "console", "wardrobe", "dresser", "nightstand",
-                   "stool", "ottoman", "plant", "basket", "decor", "vase", "rug", "carpet"}
+    # Floor-standing items: force z=0 unless explicitly elevated
+    floor_types = {"washing_machine", "washer", "dryer", "radiator", "heater",
+                   "sofa", "couch", "armchair", "chair", "table", "bed",
+                   "cabinet", "bookshelf", "tv_stand", "sideboard", "console",
+                   "wardrobe", "dresser", "nightstand", "stool", "ottoman",
+                   "plant", "basket", "decor", "vase", "rug", "carpet"}
     if item_type in floor_types and z0 > 0.1 and z0 < fh:
         z0 = 0.0
+
+    # Vertical pipes: start from floor (Claude often gives z=center of pipe)
+    if item_type == "pipe" and fh > max(fw, fd):  # vertical pipe
+        z0 = 0.0
+        # Clamp pipe height to room height
+        if room_h and z0 + fh > room_h:
+            fh = room_h
+
+    # Horizontal pipes: clamp z so they don't poke through ceiling
+    if item_type == "pipe" and fw > max(fh, fd) and room_h:
+        z0 = min(z0, room_h - 0.05)
 
     # Clamp furniture position to stay within room bounds
     if room_w is not None and room_d is not None:
@@ -1766,7 +1778,7 @@ def build_scene(data: dict, session_dir: str = ""):
     # ── Furniture (Phase 4: GLB import has priority over primitives) ──
     for item in data.get("furniture", []):
         place_furniture(item, texture_cache, furniture_glb_dir=furniture_glb_dir,
-                        room_w=W, room_d=D)
+                        room_w=W, room_d=D, room_h=H)
 
     # ── Architectural features (from room template) ──
     arch = data.get("architectural", {})
