@@ -1714,28 +1714,18 @@ def _build_walls_with_openings(openings, W, D, H, wall_color, wall_rough, wall_m
                     glass.scale = (0.005, ow - 0.06, oh - 0.06)
                 glass.data.materials.append(glass_mat)
 
-                # Window frame (brown wood border)
-                frame_mat = make_material(f"mat_frame_{wname}", "#8B7355", 0.4, "paint",
-                                          texture_cache)
-                frame_t = 0.04  # frame thickness
-                frame_d = 0.04  # frame depth
-
-                # 4 frame pieces: top, bottom/sill, left, right
-                for fname, fu, fv, fsx, fsz in [
-                    ("top",   cu,      v_top,    ow + frame_t, frame_t),
-                    ("sill",  cu,      v_bottom, ow + frame_t*2, frame_t),
-                    ("left",  u_left,  cv,       frame_t,  oh + frame_t),
-                    ("right", u_right, cv,       frame_t,  oh + frame_t),
-                ]:
-                    floc, _ = _loc(fu, fv, 0, 0)
-                    bpy.ops.mesh.primitive_cube_add(size=1, location=floc)
-                    fr = bpy.context.active_object
-                    fr.name = f"frame_{wname}_{fname}"
-                    if is_ns:
-                        fr.scale = (fsx, frame_d, fsz)
-                    else:
-                        fr.scale = (frame_d, fsx, fsz)
-                    fr.data.materials.append(frame_mat)
+                # Window sill (bottom ledge)
+                sill_mat = make_material(f"mat_sill_{wname}", "#F0EBE0", 0.4, "paint",
+                                         texture_cache)
+                sill_loc, _ = _loc(cu, v_bottom - 0.015, 0, 0)
+                bpy.ops.mesh.primitive_cube_add(size=1, location=sill_loc)
+                sill = bpy.context.active_object
+                sill.name = f"sill_{wname}"
+                if is_ns:
+                    sill.scale = (ow + 0.06, 0.07, 0.03)
+                else:
+                    sill.scale = (0.07, ow + 0.06, 0.03)
+                sill.data.materials.append(sill_mat)
 
             elif otype == "door":
                 door_mat = make_material(f"mat_door_{wname}", "#D2B48C", 0.5, "wood",
