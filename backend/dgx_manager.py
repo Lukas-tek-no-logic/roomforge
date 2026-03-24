@@ -1,10 +1,15 @@
 """
-DGX Spark container management — start/stop Docker Compose services over SSH.
+DGX Spark service management.
+
+Status checks use lightweight HTTP health endpoints (no SSH needed).
+Start/stop still require SSH access to the DGX host.
 """
 
 import asyncio
 import json
 import os
+
+import httpx
 
 DGX_HOST = os.environ.get("DGX_HOST", "192.168.0.200")
 
@@ -17,9 +22,38 @@ SERVICES: dict[str, dict] = {
 }
 
 
+# ── Health check via HTTP (lightweight, no SSH) ─────────────────────────────
+
+async def get_service_status(name: str) -> dict:
+    """Check service health via HTTP /health endpoint."""
+    svc = SERVICES.get(name)
+    if not svc:
+        return {"name": name, "status": "unknown", "port": None}
+
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.get(f"http://{DGX_HOST}:{svc['port']}/health")
+            if resp.status_code == 200:
+                return {"name": name, "status": "running", "port": svc["port"]}
+    except Exception:
+        pass
+    return {"name": name, "status": "stopped", "port": svc["port"]}
+
+
+async def get_all_statuses() -> list[dict]:
+    """Check status of all known services in parallel via HTTP."""
+    tasks = [get_service_status(name) for name in SERVICES]
+    return list(await asyncio.gather(*tasks))
+
+
+# ── Start/stop via SSH (requires SSH key access) ────────────────────────────
+
 async def _run_ssh(cmd: str, timeout: float = 30) -> tuple[int, str, str]:
     """Run a command on the DGX host via SSH and return (returncode, stdout, stderr)."""
-    full = f'ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no luok@{DGX_HOST} "{cmd}"'
+    full = (
+        f'ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no '
+        f'-o BatchMode=yes luok@{DGX_HOST} "{cmd}"'
+    )
     proc = await asyncio.create_subprocess_shell(
         full,
         stdout=asyncio.subprocess.PIPE,
@@ -29,44 +63,9 @@ async def _run_ssh(cmd: str, timeout: float = 30) -> tuple[int, str, str]:
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
     except asyncio.TimeoutError:
         proc.kill()
+        await proc.wait()
         return -1, "", "timeout"
     return proc.returncode, stdout.decode(), stderr.decode()
-
-
-async def get_service_status(name: str) -> dict:
-    """Check whether a single service's containers are running."""
-    svc = SERVICES.get(name)
-    if not svc:
-        return {"name": name, "status": "unknown", "port": None}
-
-    cmd = f"cd {svc['path']} && docker compose ps --format json"
-    rc, stdout, stderr = await _run_ssh(cmd)
-
-    if rc != 0:
-        return {"name": name, "status": "stopped", "port": svc["port"]}
-
-    # docker compose ps --format json outputs one JSON object per line
-    status = "stopped"
-    for line in stdout.strip().splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            obj = json.loads(line)
-            state = obj.get("State", "").lower()
-            if state == "running":
-                status = "running"
-                break
-        except json.JSONDecodeError:
-            continue
-
-    return {"name": name, "status": status, "port": svc["port"]}
-
-
-async def get_all_statuses() -> list[dict]:
-    """Check status of all known services in parallel."""
-    tasks = [get_service_status(name) for name in SERVICES]
-    return list(await asyncio.gather(*tasks))
 
 
 async def start_service(name: str) -> dict:
